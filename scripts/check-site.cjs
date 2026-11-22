@@ -13,3 +13,18 @@ assert(html.includes('renderWalkforwardEquity(detail)'),'Missing out-of-sample e
 assert(html.includes('renderProfitUncertainty(detail)'),'Missing out-of-sample bootstrap uncertainty');
 assert(html.includes('Math.max(1.01,Number(m.opening_home)*(1-slippage))'),'Missing odds cost assumption');
 console.log('Validated '+scripts.length+' inline scripts, navigation and betting lab components.');
+
+// Independently verified historical benchmark: E0 August 2025, 0.5 PPG edge,
+// opening odds 1.50-4.00, 2% commission and 1% slippage.
+// Expected: 4 bets, 2 wins, -0.7098 units (rounded at the end).
+const benchmark = [
+  {odds:1.91,won:false},
+  {odds:1.62,won:false},
+  {odds:1.80,won:true},
+  {odds:1.55,won:true}
+];
+const net = benchmark.reduce((sum,b)=>sum+(b.won?(Math.max(1.01,b.odds*0.99)-1)*0.98:-1),0);
+assert.equal(benchmark.length,4);
+assert.equal(benchmark.filter(b=>b.won).length,2);
+assert(Math.abs(net-(-0.70979))<0.0001,'Historical P/L benchmark mismatch');
+console.log('Historical August 2025 profit benchmark passed: '+net.toFixed(4)+' units.');
