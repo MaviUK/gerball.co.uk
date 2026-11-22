@@ -2,7 +2,7 @@
 // and SUPABASE_SERVICE_ROLE_KEY as server-side secrets. Never expose either in the browser.
 // Invoke at most twice weekly, and confirm the source's terms before enabling automation.
 import { createClient } from "jsr:@supabase/supabase-js@2";
-const seasons=["2526","2425","2324","2223","2122","2021","1920","1819","1718","1617"];
+const seasons=["2627","2526","2425","2324"]; const countryByLeague={"E0":"England","E1":"England","E2":"England","E3":"England","SC0":"Scotland","SC1":"Scotland","SC2":"Scotland","SC3":"Scotland","D1":"Germany","D2":"Germany","I1":"Italy","I2":"Italy","SP1":"Spain","SP2":"Spain","F1":"France","F2":"France","N1":"Netherlands","B1":"Belgium","P1":"Portugal","G1":"Greece","T1":"Turkey"}; const leagues=Object.keys(countryByLeague);
 function csvRows(csv:string):Record<string,string>[] {
  const out:string[][]=[];let row:string[]=[],field="",quoted=false;
  for(let i=0;i<csv.length;i++){const ch=csv[i];if(ch==='"'){if(quoted&&csv[i+1]==='"'){field+='"';i++}else quoted=!quoted}
@@ -21,18 +21,18 @@ Deno.serve(async(req:Request)=>{
  if(!url||!key)return new Response("Missing server configuration",{status:500});
  const db=createClient(url,key,{auth:{persistSession:false}});
  const summary=[];
- for(const season of seasons){
-  const csvUrl=`https://www.football-data.co.uk/mmz4281/${season}/E0.csv`;
+ for(const season of seasons) for(const league of leagues){
+  const csvUrl=`https://www.football-data.co.uk/mmz4281/${season}/${league}.csv`;
   try{
    const res=await fetch(csvUrl,{headers:{"User-Agent":"EdgeLab personal research importer"}});
    if(!res.ok)throw new Error(`Source HTTP ${res.status}`);
-   const parsed=csvRows(await res.text());const records=parsed.filter(r=>r.Div==="E0"&&r.HomeTeam&&r.AwayTeam&&isoDate(r.Date)&&["H","D","A"].includes(r.FTR)).map(r=>({
-    season,match_date:isoDate(r.Date),home_team:r.HomeTeam,away_team:r.AwayTeam,full_time_result:r.FTR,
-    home_goals:num(r.FTHG),away_goals:num(r.FTAG),exchange_home:num(r.BFECH),exchange_draw:num(r.BFECD),exchange_away:num(r.BFECA),source:"football-data.co.uk"
+   const parsed=csvRows(await res.text());const records=parsed.filter(r=>r.Div===league&&r.HomeTeam&&r.AwayTeam&&isoDate(r.Date)&&["H","D","A"].includes(r.FTR)).map(r=>({
+    season,league,country:countryByLeague[league],match_date:isoDate(r.Date),home_team:r.HomeTeam,away_team:r.AwayTeam,full_time_result:r.FTR,
+    home_goals:num(r.FTHG),away_goals:num(r.FTAG),exchange_home:num(r.BFECH),exchange_draw:num(r.BFECD),exchange_away:num(r.BFECA),source:"football-data.co.uk",source_data:r
    }));
-   let saved=0;for(let i=0;i<records.length;i+=200){const {error}=await db.from("matches").upsert(records.slice(i,i+200),{onConflict:"season,match_date,home_team,away_team"});if(error)throw error;saved+=Math.min(200,records.length-i)}
-   summary.push({season,saved});
-  }catch(e){summary.push({season,error:String(e)})}
+   let saved=0;for(let i=0;i<records.length;i+=200){const {error}=await db.from("matches").upsert(records.slice(i,i+200),{onConflict:"league,season,match_date,home_team,away_team"});if(error)throw error;saved+=Math.min(200,records.length-i)}
+   summary.push({season,league,saved});
+  }catch(e){summary.push({season,league,error:e instanceof Error ? e.message : JSON.stringify(e)})}
  }
  return Response.json({summary});
 });
