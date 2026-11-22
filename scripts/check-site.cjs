@@ -6,8 +6,9 @@ const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
 assert(scripts.length>0,'Missing inline JavaScript');
 for (const [i,src] of scripts.entries()) new vm.Script(src,{filename:'index.html script '+(i+1)});
 for (const id of ['view-overview','view-tables','view-compare','view-betting','view-data']) assert(html.includes('id="'+id+'"'),'Missing navigation view '+id);
-for (const id of ['wfRun','wfRows','wfSeasonRows','wfCommission','wfSlippage','wfExport','comparisonToolPicker']) assert(html.includes(id),'Missing required feature '+id);
+for (const id of ['wfRun','wfRows','wfSeasonRows','wfCommission','wfSlippage','wfExport','wfEquity','wfEquitySummary','comparisonToolPicker']) assert(html.includes(id),'Missing required feature '+id);
 assert(html.includes('edgelab_walkforward_matches'),'Missing historical validation RPC');
 assert(html.includes('window.gerballLastValidation'),'Missing bet-by-bet audit trail');
+assert(html.includes('renderWalkforwardEquity(detail)'),'Missing out-of-sample equity curve');
 assert(html.includes('Math.max(1.01,Number(m.opening_home)*(1-slippage))'),'Missing odds cost assumption');
 console.log('Validated '+scripts.length+' inline scripts, navigation and betting lab components.');
