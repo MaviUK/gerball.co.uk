@@ -20,7 +20,7 @@ Deno.serve(async(req:Request)=>{
  const url=Deno.env.get("SUPABASE_URL"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
  if(!url||!key)return new Response("Missing server configuration",{status:500});
  const db=createClient(url,key,{auth:{persistSession:false}});
- const input=await req.json().catch(()=>({})); const selected=typeof input.season==="string" && /^\\d{4}$/.test(input.season) ? [input.season] : seasons; const selectedLeagues=typeof input.league==="string" && leagues.includes(input.league) ? [input.league] : leagues;
+ const input=await req.json().catch(()=>({})); const selected=typeof input.season==="string" && /^\d{4}$/.test(input.season) ? [input.season] : seasons; const selectedLeagues=typeof input.league==="string" && leagues.includes(input.league) ? [input.league] : leagues;
  const summary=[];
  for(const season of selected) for(const league of selectedLeagues){
   const csvUrl=`https://www.football-data.co.uk/mmz4281/${season}/${league}.csv`;
