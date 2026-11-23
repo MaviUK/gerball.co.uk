@@ -13,19 +13,19 @@ const benchmarks=[
 ];
 async function getGames(league,market){
   const all=[];
-  for(let start=0;start<10000;start+=1000){
+  for(const [from,to] of [['2023-08-01','2024-06-30'],['2024-07-01','2025-06-30'],['2025-07-01','2026-06-30']]){
     const response=await fetch(url+'/rest/v1/rpc/edgelab_walkforward_market',{
       method:'POST',
-      headers:{apikey:key,'Content-Type':'application/json',Range:start+'-'+(start+999)},
-      body:JSON.stringify({p_league:league,p_from:'2023-08-01',p_to:'2026-06-30',p_market:market}),
+      headers:{apikey:key,'Content-Type':'application/json'},
+      body:JSON.stringify({p_league:league,p_from:from,p_to:to,p_market:market}),
       signal:AbortSignal.timeout(60000)
     });
     if(!response.ok)throw Error(league+'/'+market+' HTTP '+response.status+' '+await response.text());
     const batch=await response.json();
+    if(batch.length>=1000)throw Error('Season exceeded API row limit: '+league+'/'+market+'/'+from);
     all.push(...batch);
-    if(batch.length<1000)return all;
   }
-  throw Error('Historical fixture limit reached: '+league+'/'+market);
+  return all;
 }
 function settle(games,market){
   const dates=[...new Set(games.map(g=>g.match_date))].sort();
