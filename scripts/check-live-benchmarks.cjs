@@ -9,7 +9,9 @@ const benchmarks=[
   {league:'E0',market:'A',bets:290,holdBets:89,holdROI:-11.23},
   {league:'E1',market:'D',bets:650,holdBets:217,holdROI:3.67},
   {league:'D1',market:'D',bets:244,holdBets:70,holdROI:12.16},
-  {league:'SC0',market:'D',bets:201,holdBets:67,holdROI:-12.39}
+  {league:'SC0',market:'D',bets:201,holdBets:67,holdROI:-12.39},
+  {league:'E0',market:'O25',bets:550,holdBets:186,holdROI:-6.20},
+  {league:'E0',market:'U25',bets:703,holdBets:199,holdROI:-3.75}
 ];
 async function getGames(league,market){
   const all=[];
