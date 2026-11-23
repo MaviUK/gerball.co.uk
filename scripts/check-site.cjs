@@ -147,8 +147,7 @@ const dashRows={items:[],replaceChildren(){this.items=[]},appendChild(x){this.it
 const dashStatus={textContent:''};
 const dashWindow={};
 const dashDocument={createElement(tag){return tag==='tr'?{cells:[],appendChild(x){this.cells.push(x)}}:{textContent:''}}};
-const renderDash=new Function('window','
-,'document',dashboardFn+';renderValidationDashboard(arguments[3])');
+const renderDash=new Function('window',String.fromCharCode(36),'document',dashboardFn+';renderValidationDashboard(arguments[3])');
 const sample=(threshold,bets,roi,seasons,low,high)=>({threshold,bets,roi,maxDD:12,positive:seasons,activeSeasons:seasons,bootstrap:{low,high,positive:0.8}});
 renderDash(dashWindow,id=>({wfValidationRows:dashRows,wfValidationStatus:dashStatus})[id],dashDocument,[sample(50,150,5,3,-2,9),sample(30,90,10,3,2,15),sample(100,150,3,3,1,6),sample(200,150,null,2,null,null)]);
 assert.equal(dashRows.items.length,4,'Validation dashboard must show every threshold');
