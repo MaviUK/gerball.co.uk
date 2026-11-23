@@ -170,7 +170,6 @@ assert(html.includes("executable_odds_source:'UNSPECIFIED'"),'Unspecified execut
 assert(html.includes("gerball-prospective-candidate-DRAFT.json"),'Draft JSON filename missing');
 console.log('Prospective candidate export guardrails passed.');
 
-const fs=require('node:fs');
 const refresh=fs.readFileSync('.github/workflows/update-current-season.yml','utf8');
 assert(refresh.includes("cron: '15 8 * * 1,5'"),'Monday/Friday refresh schedule missing');
 assert(refresh.includes("secrets.EDGELAB_IMPORT_TOKEN"),'Scheduled refresh must use a GitHub Actions secret');
