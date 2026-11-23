@@ -37,3 +37,11 @@ Verified with transactional, rolled-back test rows:
 - No test rows remain in the ledger after verification.
 
 **Important limitation:** Privileged database owners may still alter or disable triggers; this is a protected application ledger, not cryptographic immutability. No ingestion API or prospective scheduler has been activated.
+
+## Settlement ledger — 2026-11-23
+
+Created private `gerball_private.prospective_settlements` with prediction foreign key, sequential revision, server timestamp, status (WIN/LOSS/VOID/UNSETTLED), net units, official result source and event ID, result snapshot and mandatory correction reason for revision >1.
+
+The BEFORE INSERT trigger enforces server-generated timestamps, prevents pre-kickoff settlement, and enforces sequential revisions with a per-prediction advisory lock. An append-only UPDATE/DELETE rejection trigger prevents ordinary modifications. RLS is enabled and anon/authenticated roles have no table permissions. Verified table empty and privileges denied.
+
+**Not yet done:** trusted settlement ingestion, end-to-end tests using settled predictions, outcome verification against authoritative sources, version freeze, and live dashboard. Privileged database administrators can still alter triggers, so this is not cryptographically immutable.
