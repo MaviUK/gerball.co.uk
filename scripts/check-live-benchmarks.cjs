@@ -40,6 +40,7 @@ function settle(games,market){
   const split=dates[Math.floor(dates.length*.7)]||'9999-12-31';
   let bets=0,holdBets=0,holdProfit=0,profit=0;
   const audit=[];
+  const seasons=new Map();
   for(const m of games){
     if(m.home_prior_ppg===null||m.away_prior_ppg===null||Number(m.home_prior_games)<5||Number(m.away_prior_games)<5)continue;
     const h=Number(m.home_prior_ppg),a=Number(m.away_prior_ppg),odds=Number(m.opening_home);
@@ -52,12 +53,15 @@ function settle(games,market){
     bets++;
     profit+=net;
     audit.push({date:m.match_date,home:m.home_team,away:m.away_team,net});
+    const season=String(m.season||'unknown');
+    const entry=seasons.get(season)||{bets:0,profit:0};
+    entry.bets++;entry.profit+=net;seasons.set(season,entry);
     if(m.match_date>=split){holdBets++;holdProfit+=net;}
   }
   audit.sort((a,b)=>a.date.localeCompare(b.date)||a.home.localeCompare(b.home)||a.away.localeCompare(b.away));
   let equity=0,peak=0,maxDD=0;
   for(const bet of audit){equity+=bet.net;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,peak-equity);}
-  return {bets,holdBets,profit,maxDD,holdROI:holdBets?100*holdProfit/holdBets:0};
+  return {bets,holdBets,profit,maxDD,seasons:[...seasons].sort((a,b)=>a[0].localeCompare(b[0])).map(([season,v])=>({season,bets:v.bets,profit:v.profit,roi:100*v.profit/v.bets})),holdROI:holdBets?100*holdProfit/holdBets:0};
 }
 (async()=>{
   for(const b of benchmarks){
@@ -67,6 +71,9 @@ function settle(games,market){
     if(b.maxDD!==undefined)assert(Math.abs(got.maxDD-b.maxDD)<.02,b.league+'/'+b.market+' maximum drawdown expected '+b.maxDD+' got '+got.maxDD);
     assert(Math.abs(got.profit-b.profit)<.02,b.league+'/'+b.market+' full profit expected '+b.profit+' got '+got.profit);
     assert(Math.abs(got.holdROI-b.holdROI)<.015,b.league+'/'+b.market+' holdout ROI expected '+b.holdROI+' got '+got.holdROI);
-    console.log('PASS',b.league,b.market,got.bets,got.holdBets,got.holdROI.toFixed(2)+'%');
+    assert.equal(got.seasons.reduce((sum,x)=>sum+x.bets,0),got.bets,'Season bet counts reconcile');
+    assert(Math.abs(got.seasons.reduce((sum,x)=>sum+x.profit,0)-got.profit)<.0001,'Season profit reconciles');
+    console.log('PASS',b.league,b.market,got.bets,got.holdBets,got.holdROI.toFixed(2)+'%','maxDD',got.maxDD.toFixed(2));
+    console.log('ROLLING SEASONS',b.league,b.market,JSON.stringify(got.seasons.map(x=>({...x,profit:+x.profit.toFixed(2),roi:+x.roi.toFixed(2)}))));
   }
 })().catch(err=>{console.error(err);process.exitCode=1;});
