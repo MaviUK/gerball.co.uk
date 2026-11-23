@@ -28,3 +28,22 @@ assert.equal(benchmark.length,4);
 assert.equal(benchmark.filter(b=>b.won).length,2);
 assert(Math.abs(net-(-0.70979))<0.0001,'Historical P/L benchmark mismatch');
 console.log('Historical August 2025 profit benchmark passed: '+net.toFixed(4)+' units.');
+
+for (const rule of [
+  "market==='H'?h-a>=adv",
+  "market==='A'?a-h>=adv",
+  "market==='D'?Math.abs(h-a)<=adv",
+  "Math.abs(h-a)>=adv",
+  "edgelab_walkforward_market",
+  "wfCompareMarkets"
+]) assert(html.includes(rule),'Missing historical market selection rule: '+rule);
+const eligible=(market,h,a,threshold)=>market==='H'?h-a>=threshold:market==='A'?a-h>=threshold:market==='D'?Math.abs(h-a)<=threshold:Math.abs(h-a)>=threshold;
+assert.equal(eligible('H',1.8,1.4,.5),false);
+assert.equal(eligible('H',1.9,1.4,.5),true);
+assert.equal(eligible('A',1.4,2,.5),true);
+assert.equal(eligible('A',1.4,1.8,.5),false);
+assert.equal(eligible('D',1.8,1.4,.5),true);
+assert.equal(eligible('D',1.8,1.2,.5),false);
+assert.equal(eligible('O25',1.8,1.2,.5),true);
+assert.equal(eligible('U25',1.8,1.4,.5),false);
+console.log('Five-market threshold boundary checks passed.');
