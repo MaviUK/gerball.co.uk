@@ -83,3 +83,42 @@ assert(html.includes("function exportForwardAudit()"),'Audit CSV export missing'
 assert(html.includes("lines.join('\\r\\n')"),'CSV rows must use CRLF separators');
 assert(html.includes("['wager_reconciliation','wfReconciliationRows']"),'CSV must include reconciliation rows');
 console.log('Forward-audit reconciliation and CSV export regression checks passed.');
+
+const exportSource=html.match(/function exportForwardAudit\(\)\{[\s\S]*?\}\nfunction exportWagerDifferences\(\)/);
+assert(exportSource,'Missing complete forward CSV exporter');
+const exportFn=exportSource[0].slice(0,-'\nfunction exportWagerDifferences()'.length);
+const cells=values=>({querySelectorAll:()=>values.map(textContent=>({textContent}))});
+const makeTable=(head,rows)=>({querySelectorAll:selector=>selector==='thead th'?head.map(textContent=>({textContent})):[]});
+const makeBody=(head,rows)=>({closest:()=>makeTable(head,rows),querySelectorAll:()=>rows.map(cells)});
+const auditDom={
+ wfForwardMinTraining:{value:'30'},wfForwardConsistency:{value:'0'},wfOddsMin:{value:'1.5'},wfOddsMax:{value:'4'},
+ wfForwardStatus:{textContent:''},
+ wfForwardRows:makeBody(['Season','League','Market','Training seasons','Training bets','Training ROI','Test bets','Test profit','Test ROI'],[['2526','E0','Home','2','80','5.00%','2','0.75','37.50%']]),
+ wfReconciliationRows:makeBody(['Season','League','Market','Reported bets','Wager count','Reported profit','Wager profit','Check'],[['2526','E0','Home','2','2','0.7500','0.7500','MATCH']])
+};
+let capturedBlob=null,downloads=0;
+const mockURL={createObjectURL(blob){capturedBlob=blob;return 'blob:test'},revokeObjectURL(){}};
+const mockDocument={body:{appendChild(){}},createElement(){return {click(){downloads++},remove(){}}}};
+const exportWindow={gerballForwardAuditOK:true};
+const exportRunner=new Function('window','$','document','Blob','URL','setTimeout',exportFn+';exportForwardAudit()');
+exportRunner(exportWindow,id=>auditDom[id],mockDocument,Blob,mockURL,()=>{});
+assert.equal(downloads,1,'Valid export must initiate one download');
+assert(capturedBlob,'CSV blob must be produced');
+const exportedCSV=await capturedBlob.text();
+const csvLines=exportedCSV.replace(/^\uFEFF/,'').split('\r\n');
+const parseCSV=line=>[...line.matchAll(/"((?:[^"]|"")*)"|([^,]+)/g)].map(m=>(m[1]??m[2]).replace(/""/g,'"'));
+const records=csvLines.map(parseCSV);
+const getRow=(section,type)=>records.find(row=>row[0]===section&&row[1]===type);
+const forwardRow=getRow('forward_selections','data'),reconciledRow=getRow('wager_reconciliation','data');
+assert(forwardRow&&reconciledRow,'CSV must contain forward selection and reconciliation');
+const independentNet=[-1,1.75].reduce((sum,n)=>sum+n,0);
+assert.equal(Number(forwardRow[8]),independentNet,'Exported forward profit must match independent settled wagers');
+assert.equal(Number(reconciledRow[7]),independentNet,'Exported reconciliation profit must match independent settled wagers');
+assert.equal(Number(forwardRow[7]),2,'Exported bet count must match wager count');
+assert.equal(Number(reconciledRow[6]),2,'Exported reconciled wager count must match');
+assert.equal(reconciledRow[9],'MATCH','Exported reconciliation status must match');
+assert.equal(getRow('metadata','settings')[2],'minimum_training_bets','CSV must preserve training settings');
+exportWindow.gerballForwardAuditOK=false;
+exportRunner(exportWindow,id=>auditDom[id],mockDocument,Blob,mockURL,()=>{});
+assert.equal(downloads,1,'Failed reconciliation must not download CSV');
+console.log('Generated CSV values independently reconcile with settled wager totals; export gating passed.');
