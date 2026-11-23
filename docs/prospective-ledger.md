@@ -23,3 +23,17 @@ Guards:
 - Add append-only settlement events and reconciliation against official results.
 - Add timestamped strategy approval/freeze before 2026-12-01.
 - Test pre-kickoff rejection, duplicate rejection, mutation rejection, access control and replay safety.
+
+## Security verification — 2026-11-23
+
+Implemented `gerball_private.enforce_prediction_insert()` as a BEFORE INSERT trigger. It replaces any caller-provided `recorded_at` with `clock_timestamp()`, rejects non-future kickoffs and blank key identifiers.
+
+Verified with transactional, rolled-back test rows:
+- Timestamp spoofing replaced by server clock.
+- Duplicate event/market/version rejected.
+- UPDATE and DELETE rejected by append-only trigger.
+- Past-kickoff INSERT rejected.
+- Anonymous role lacks schema USAGE and table INSERT; authenticated role lacks table SELECT.
+- No test rows remain in the ledger after verification.
+
+**Important limitation:** Privileged database owners may still alter or disable triggers; this is a protected application ledger, not cryptographic immutability. No ingestion API or prospective scheduler has been activated.
