@@ -47,3 +47,19 @@ assert.equal(eligible('D',1.8,1.2,.5),false);
 assert.equal(eligible('O25',1.8,1.2,.5),true);
 assert.equal(eligible('U25',1.8,1.4,.5),false);
 console.log('Five-market threshold boundary checks passed.');
+
+const multiLeagueBenchmarks = [
+  {league:'E0',market:'H',bets:186,holdoutBets:58,holdoutROI:-8.89},
+  {league:'E0',market:'A',bets:290,holdoutBets:89,holdoutROI:-11.23},
+  {league:'E1',market:'D',bets:650,holdoutBets:217,holdoutROI:3.67},
+  {league:'D1',market:'D',bets:244,holdoutBets:70,holdoutROI:12.16},
+  {league:'SC0',market:'D',bets:201,holdoutBets:67,holdoutROI:-12.39}
+];
+for(const row of multiLeagueBenchmarks){
+  assert(row.holdoutBets<=row.bets,'Invalid historical benchmark count');
+  assert(Number.isFinite(row.holdoutROI),'Invalid historical benchmark ROI');
+}
+for(const feature of ['wfLeagueScope','holdBets','holdProfit','Risk-adjusted holdout score','market===\'O25\'?hg+ag>2']){
+  assert(html.includes(feature),'Missing cross-league validation feature: '+feature);
+}
+console.log('Cross-league historical benchmark fixtures and holdout UI checks passed.');
