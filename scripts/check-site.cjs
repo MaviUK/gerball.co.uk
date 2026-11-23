@@ -90,7 +90,7 @@ assert(exportSource,'Missing complete forward CSV exporter');
 const exportFn=exportSource[0].slice(0,-'\nfunction exportWagerDifferences()'.length);
 const cells=values=>({querySelectorAll:()=>values.map(textContent=>({textContent}))});
 const makeTable=(head,rows)=>({querySelectorAll:selector=>selector==='thead th'?head.map(textContent=>({textContent})):[]});
-const makeBody=(head,rows)=>({closest:()=>makeTable(head,rows),querySelectorAll:()=>rows.map(cells)});
+const makeBody=(head,rows)=>({closest:()=>makeTable(head,rows),querySelectorAll:()=>rows.map(cells),querySelector:()=>rows.length?cells(rows[0]):null});
 const auditDom={
  wfForwardMinTraining:{value:'30'},wfForwardConsistency:{value:'0'},wfOddsMin:{value:'1.5'},wfOddsMax:{value:'4'},
  wfForwardStatus:{textContent:''},
