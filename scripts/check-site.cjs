@@ -161,3 +161,11 @@ assert.equal(rowTexts[3].at(-1),'Insufficient evidence','Missing interval must b
 console.log('Validation dashboard bootstrap and evidence-gate regression checks passed.');
 
 })().catch(err=>{console.error(err);process.exitCode=1});
+
+assert(html.includes("function exportProspectiveCandidate()"),'Draft prospective strategy exporter missing');
+assert(html.includes("status:'DRAFT_NOT_FROZEN'"),'Candidate export must explicitly be marked draft');
+assert(html.includes("ledger_storage:'NOT_IMPLEMENTED'"),'Candidate must not imply prospective ledger exists');
+assert(html.includes("selection_timing:'UNSPECIFIED'"),'Unspecified selection timing must not be invented');
+assert(html.includes("executable_odds_source:'UNSPECIFIED'"),'Unspecified executable odds source must not be invented');
+assert(html.includes("gerball-prospective-candidate-DRAFT.json"),'Draft JSON filename missing');
+console.log('Prospective candidate export guardrails passed.');
