@@ -169,3 +169,12 @@ assert(html.includes("selection_timing:'UNSPECIFIED'"),'Unspecified selection ti
 assert(html.includes("executable_odds_source:'UNSPECIFIED'"),'Unspecified executable odds source must not be invented');
 assert(html.includes("gerball-prospective-candidate-DRAFT.json"),'Draft JSON filename missing');
 console.log('Prospective candidate export guardrails passed.');
+
+const fs=require('node:fs');
+const refresh=fs.readFileSync('.github/workflows/update-current-season.yml','utf8');
+assert(refresh.includes("cron: '15 8 * * 1,5'"),'Monday/Friday refresh schedule missing');
+assert(refresh.includes("secrets.EDGELAB_IMPORT_TOKEN"),'Scheduled refresh must use a GitHub Actions secret');
+assert(refresh.includes("workflow_dispatch:"),'Manual import trigger missing');
+assert(refresh.includes("if len(rows)!=21 or failures:"),'Scheduled import must fail on incomplete league updates');
+assert(!refresh.includes('echo "$IMPORT_TOKEN"'),'Importer token must never be printed');
+console.log('Scheduled current-season import configuration checks passed.');
