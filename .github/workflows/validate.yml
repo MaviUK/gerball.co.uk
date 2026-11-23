@@ -13,3 +13,5 @@ jobs:
           node-version: '22'
       - name: Validate inline scripts and required navigation
         run: node scripts/check-site.cjs
+      - name: Reconcile live historical league-market benchmarks
+        run: node scripts/check-live-benchmarks.cjs
