@@ -124,4 +124,41 @@ exportRunner(exportWindow,id=>auditDom[id],mockDocument,Blob,mockURL,()=>{});
 assert.equal(downloads,1,'Failed reconciliation must not download CSV');
 console.log('Generated CSV values independently reconcile with settled wager totals; export gating passed.');
 
+
+const bootstrapMatch=html.match(/function seasonBootstrapROI\(blocks,threshold\)\{[\s\S]*?\}\nfunction renderSeasonBootstrap\(/);
+assert(bootstrapMatch,'Missing season-block bootstrap implementation');
+const bootstrapFn=new Function(bootstrapMatch[0].slice(0,-'\nfunction renderSeasonBootstrap('.length)+';return seasonBootstrapROI');
+const bootstrap=bootstrapFn();
+const allWins=bootstrap([{bets:10,profit:5},{bets:10,profit:5},{bets:10,profit:5}],30);
+assert.equal(allWins.low,50,'All-positive fixed-return seasons must have exact 50% lower ROI');
+assert.equal(allWins.high,50,'All-positive fixed-return seasons must have exact 50% upper ROI');
+assert.equal(allWins.positive,1,'All-positive seasons must produce 100% positive bootstrap draws');
+const allLosses=bootstrap([{bets:10,profit:-10},{bets:10,profit:-10},{bets:10,profit:-10}],30);
+assert.equal(allLosses.low,-100,'All-losing seasons must have exact -100% lower ROI');
+assert.equal(allLosses.high,-100,'All-losing seasons must have exact -100% upper ROI');
+assert.equal(allLosses.positive,0,'All-losing seasons must produce zero positive draws');
+assert.equal(bootstrap([{bets:10,profit:5},{bets:10,profit:5}],30).low,null,'Two seasons must not be reported as a 95% bootstrap interval');
+assert.deepEqual(bootstrap([{bets:10,profit:3},{bets:20,profit:-5},{bets:15,profit:2}],50),bootstrap([{bets:10,profit:3},{bets:20,profit:-5},{bets:15,profit:2}],50),'Bootstrap must be deterministic');
+
+const dashboardMatch=html.match(/function renderValidationDashboard\(summaries\)\{[\s\S]*?\}\nfunction renderThresholdSensitivity\(/);
+assert(dashboardMatch,'Missing validation dashboard renderer');
+const dashboardFn=dashboardMatch[0].slice(0,-'\nfunction renderThresholdSensitivity('.length);
+const dashRows={items:[],replaceChildren(){this.items=[]},appendChild(x){this.items.push(x)}};
+const dashStatus={textContent:''};
+const dashWindow={};
+const dashDocument={createElement(tag){return tag==='tr'?{cells:[],appendChild(x){this.cells.push(x)}}:{textContent:''}}};
+const renderDash=new Function('window','
+,'document',dashboardFn+';renderValidationDashboard(arguments[3])');
+const sample=(threshold,bets,roi,seasons,low,high)=>({threshold,bets,roi,maxDD:12,positive:seasons,activeSeasons:seasons,bootstrap:{low,high,positive:0.8}});
+renderDash(dashWindow,id=>({wfValidationRows:dashRows,wfValidationStatus:dashStatus})[id],dashDocument,[sample(50,150,5,3,-2,9),sample(30,90,10,3,2,15),sample(100,150,3,3,1,6),sample(200,150,null,2,null,null)]);
+assert.equal(dashRows.items.length,4,'Validation dashboard must show every threshold');
+assert.equal(dashWindow.gerballValidationSummaries[0].threshold,30,'Dashboard must rank by historical ROI');
+assert.equal(dashWindow.gerballValidationSummaries.at(-1).threshold,200,'Missing ROI must rank last');
+const rowTexts=dashRows.items.map(row=>row.cells.map(cell=>cell.textContent));
+assert.equal(rowTexts[0].at(-1),'Insufficient evidence','Positive ROI with fewer than 100 bets must be marked insufficient');
+assert.equal(rowTexts[1].at(-1),'Uncertain — interval crosses zero','Cross-zero interval must not be declared a proven edge');
+assert.equal(rowTexts[2].at(-1),'Positive historical interval — unconfirmed','Positive interval must remain unconfirmed');
+assert.equal(rowTexts[3].at(-1),'Insufficient evidence','Missing interval must be insufficient evidence');
+console.log('Validation dashboard bootstrap and evidence-gate regression checks passed.');
+
 })().catch(err=>{console.error(err);process.exitCode=1});
