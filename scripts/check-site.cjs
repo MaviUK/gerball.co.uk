@@ -84,6 +84,7 @@ assert(html.includes("lines.join('\\r\\n')"),'CSV rows must use CRLF separators'
 assert(html.includes("['wager_reconciliation','wfReconciliationRows']"),'CSV must include reconciliation rows');
 console.log('Forward-audit reconciliation and CSV export regression checks passed.');
 
+(async()=>{
 const exportSource=html.match(/function exportForwardAudit\(\)\{[\s\S]*?\}\nfunction exportWagerDifferences\(\)/);
 assert(exportSource,'Missing complete forward CSV exporter');
 const exportFn=exportSource[0].slice(0,-'\nfunction exportWagerDifferences()'.length);
@@ -122,3 +123,5 @@ exportWindow.gerballForwardAuditOK=false;
 exportRunner(exportWindow,id=>auditDom[id],mockDocument,Blob,mockURL,()=>{});
 assert.equal(downloads,1,'Failed reconciliation must not download CSV');
 console.log('Generated CSV values independently reconcile with settled wager totals; export gating passed.');
+
+})().catch(err=>{console.error(err);process.exitCode=1});
