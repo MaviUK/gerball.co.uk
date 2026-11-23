@@ -63,3 +63,23 @@ for(const feature of ['wfLeagueScope','holdBets','holdProfit','Risk-adjusted hol
   assert(html.includes(feature),'Missing cross-league validation feature: '+feature);
 }
 console.log('Cross-league historical benchmark fixtures and holdout UI checks passed.');
+
+const reconciliationSource=html.match(/function renderAuditReconciliation\(\)\{[\s\S]*?\}\nfunction exportForwardAudit\(\)/);
+assert(reconciliationSource,'Missing reconciliation function or export boundary');
+const reconciliationFn=reconciliationSource[0].slice(0,-'\nfunction exportForwardAudit()'.length);
+const elements={wfReconciliationRows:{rows:[],replaceChildren(){this.rows=[]},appendChild(row){this.rows.push(row)}},wfReconciliationStatus:{textContent:''}};
+const doc={createElement(tag){return tag==='tr'?{cells:[],appendChild(cell){this.cells.push(cell)}}:{textContent:''}}};
+const win={gerballForwardAuditSelections:[],gerballForwardAuditOK:false};
+const runReconciliation=new Function('window','$','document',reconciliationFn+';renderAuditReconciliation()');
+const execute=selections=>{win.gerballForwardAuditSelections=selections;runReconciliation(win,id=>elements[id],doc);return win.gerballForwardAuditOK};
+const valid={season:'2526',league:'E0',market:'Home',reportedBets:2,reportedProfit:0.75,wagers:[{net:-1},{net:1.75}]};
+assert.equal(execute([valid]),true,'Valid wager reconciliation must pass');
+assert.equal(elements.wfReconciliationRows.rows.length,1,'Must show season audit row');
+assert.equal(execute([{...valid,reportedBets:3}]),false,'Bet-count mismatch must block export');
+assert.equal(execute([{...valid,reportedProfit:0.8}]),false,'Profit mismatch must block export');
+assert.equal(execute([]),false,'Empty audit must block export');
+assert(html.includes("if(!window.gerballForwardAuditOK)"),'Audit export must be gated by reconciliation');
+assert(html.includes("function exportForwardAudit()"),'Audit CSV export missing');
+assert(html.includes("lines.join('\\r\\n')"),'CSV rows must use CRLF separators');
+assert(html.includes("['wager_reconciliation','wfReconciliationRows']"),'CSV must include reconciliation rows');
+console.log('Forward-audit reconciliation and CSV export regression checks passed.');
