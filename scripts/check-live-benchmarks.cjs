@@ -20,7 +20,7 @@ async function getGames(league,market){
       body:JSON.stringify({p_league:league,p_from:'2023-08-01',p_to:'2026-06-30',p_market:market}),
       signal:AbortSignal.timeout(60000)
     });
-    assert(response.ok,league+'/'+market+' HTTP '+response.status+' '+await response.text());
+    if(!response.ok)throw Error(league+'/'+market+' HTTP '+response.status+' '+await response.text());
     const batch=await response.json();
     all.push(...batch);
     if(batch.length<1000)return all;
