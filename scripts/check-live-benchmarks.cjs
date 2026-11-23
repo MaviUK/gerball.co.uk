@@ -16,15 +16,21 @@ const benchmarks=[
 async function getGames(league,market){
   const all=[];
   for(const [from,to] of [['2023-08-01','2023-10-31'],['2023-11-01','2024-01-31'],['2024-02-01','2024-04-30'],['2024-05-01','2024-06-30'],['2024-07-01','2024-09-30'],['2024-10-01','2024-12-31'],['2025-01-01','2025-03-31'],['2025-04-01','2025-06-30'],['2025-07-01','2025-09-30'],['2025-10-01','2025-12-31'],['2026-01-01','2026-03-31'],['2026-04-01','2026-06-30']]){
-    const response=await fetch(url+'/rest/v1/rpc/edgelab_walkforward_market',{
-      method:'POST',
-      headers:{apikey:key,'Content-Type':'application/json'},
-      body:JSON.stringify({p_league:league,p_from:from,p_to:to,p_market:market}),
-      signal:AbortSignal.timeout(60000)
-    });
-    if(!response.ok)throw Error(league+'/'+market+' HTTP '+response.status+' '+await response.text());
-    const batch=await response.json();
-    if(batch.length>=1000)throw Error('Season exceeded API row limit: '+league+'/'+market+'/'+from);
+    let batch;
+    for(let attempt=0;attempt<4;attempt++){
+      const response=await fetch(url+'/rest/v1/rpc/edgelab_walkforward_market',{
+        method:'POST',
+        headers:{apikey:key,'Content-Type':'application/json'},
+        body:JSON.stringify({p_league:league,p_from:from,p_to:to,p_market:market}),
+        signal:AbortSignal.timeout(60000)
+      });
+      if(response.ok){batch=await response.json();break;}
+      const error=await response.text();
+      if(attempt===3||!error.includes('57014'))throw Error(league+'/'+market+' HTTP '+response.status+' '+error);
+      console.warn('Retrying timed-out historical query',league,market,from,'attempt',attempt+2);
+      await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));
+    }
+    if(batch.length>=1000)throw Error('Quarter exceeded API row limit: '+league+'/'+market+'/'+from);
     all.push(...batch);
   }
   return all;
