@@ -1,0 +1,47 @@
+name: Update current football season
+on:
+  schedule:
+    # 08:15 UTC Monday and Friday. GitHub scheduled jobs may be delayed.
+    - cron: '15 8 * * 1,5'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: football-data-current-season
+  cancel-in-progress: false
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMPORT_TOKEN: ${{ secrets.EDGELAB_IMPORT_TOKEN }}
+    steps:
+      - name: Check importer credentials
+        shell: bash
+        run: |
+          if [ -z "$IMPORT_TOKEN" ]; then
+            echo "::error::Set EDGELAB_IMPORT_TOKEN in GitHub Actions secrets to match the Supabase Edge Function secret."
+            exit 1
+          fi
+      - name: Import current 2026-27 season
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          url = 'https://hdueztssmsvvxkwqgcnm.supabase.co/functions/v1/import-football-data'
+          payload = json.dumps({'season':'2627'}).encode()
+          req = urllib.request.Request(url, data=payload, method='POST', headers={
+            'Content-Type':'application/json',
+            'x-edgelab-import-token':os.environ['IMPORT_TOKEN']
+          })
+          try:
+            with urllib.request.urlopen(req, timeout=600) as response:
+              result=json.load(response)
+          except urllib.error.HTTPError as exc:
+            raise SystemExit(f'Importer HTTP {exc.code}: {exc.read(500).decode(errors="replace")}')
+          rows=result.get('summary',[])
+          failures=[r for r in rows if 'error' in r]
+          print(json.dumps({'season':'2627','leagues':len(rows),'matches_upserted':sum(r.get('saved',0) for r in rows),'failures':failures},indent=2))
+          if len(rows)!=21 or failures:
+            raise SystemExit('Incomplete import: expected all 21 leagues without errors')
+          PY
