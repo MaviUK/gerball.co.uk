@@ -5,13 +5,13 @@ const html=fs.readFileSync('index.html','utf8');
 const url=html.match(/const CLOUD_URL='([^']+)'/)[1];
 const key=html.match(/const CLOUD_KEY='([^']+)'/)[1];
 const benchmarks=[
-  {league:'E0',market:'H',bets:186,holdBets:58,holdROI:-8.89},
-  {league:'E0',market:'A',bets:290,holdBets:89,holdROI:-11.23},
-  {league:'E1',market:'D',bets:650,holdBets:217,holdROI:3.67},
-  {league:'D1',market:'D',bets:244,holdBets:70,holdROI:12.16},
-  {league:'SC0',market:'D',bets:201,holdBets:67,holdROI:-12.39},
-  {league:'E0',market:'O25',bets:550,holdBets:186,holdROI:-6.20},
-  {league:'E0',market:'U25',bets:703,holdBets:199,holdROI:-3.75}
+  {league:'E0',market:'H',bets:186,holdBets:58,holdROI:-8.89,profit:-28.65},
+  {league:'E0',market:'A',bets:290,holdBets:89,holdROI:-11.23,profit:-18.06},
+  {league:'E1',market:'D',bets:650,holdBets:217,holdROI:3.67,profit:-57.91},
+  {league:'D1',market:'D',bets:244,holdBets:70,holdROI:12.16,profit:0.92},
+  {league:'SC0',market:'D',bets:201,holdBets:67,holdROI:-12.39,profit:27.22},
+  {league:'E0',market:'O25',bets:550,holdBets:186,holdROI:-6.20,profit:-38.0874},
+  {league:'E0',market:'U25',bets:703,holdBets:199,holdROI:-3.75,profit:-47.1533}
 ];
 async function getGames(league,market){
   const all=[];
@@ -32,7 +32,7 @@ async function getGames(league,market){
 function settle(games,market){
   const dates=[...new Set(games.map(g=>g.match_date))].sort();
   const split=dates[Math.floor(dates.length*.7)]||'9999-12-31';
-  let bets=0,holdBets=0,holdProfit=0;
+  let bets=0,holdBets=0,holdProfit=0,profit=0;
   for(const m of games){
     if(m.home_prior_ppg===null||m.away_prior_ppg===null||Number(m.home_prior_games)<5||Number(m.away_prior_games)<5)continue;
     const h=Number(m.home_prior_ppg),a=Number(m.away_prior_ppg),odds=Number(m.opening_home);
@@ -43,15 +43,17 @@ function settle(games,market){
     const won=market==='H'?hg>ag:market==='D'?hg===ag:market==='A'?hg<ag:market==='O25'?hg+ag>2:hg+ag<3;
     const net=won?(Math.max(1.01,odds*.99)-1)*.98:-1;
     bets++;
+    profit+=net;
     if(m.match_date>=split){holdBets++;holdProfit+=net;}
   }
-  return {bets,holdBets,holdROI:holdBets?100*holdProfit/holdBets:0};
+  return {bets,holdBets,profit,holdROI:holdBets?100*holdProfit/holdBets:0};
 }
 (async()=>{
   for(const b of benchmarks){
     const got=settle(await getGames(b.league,b.market),b.market);
     assert.equal(got.bets,b.bets,b.league+'/'+b.market+' bet count');
     assert.equal(got.holdBets,b.holdBets,b.league+'/'+b.market+' holdout bet count');
+    assert(Math.abs(got.profit-b.profit)<.02,b.league+'/'+b.market+' full profit expected '+b.profit+' got '+got.profit);
     assert(Math.abs(got.holdROI-b.holdROI)<.015,b.league+'/'+b.market+' holdout ROI expected '+b.holdROI+' got '+got.holdROI);
     console.log('PASS',b.league,b.market,got.bets,got.holdBets,got.holdROI.toFixed(2)+'%');
   }
