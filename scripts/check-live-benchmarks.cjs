@@ -5,7 +5,7 @@ const html=fs.readFileSync('index.html','utf8');
 const url=html.match(/const CLOUD_URL='([^']+)'/)[1];
 const key=html.match(/const CLOUD_KEY='([^']+)'/)[1];
 const benchmarks=[
-  {league:'E0',market:'H',bets:186,holdBets:58,holdROI:-8.89,profit:-28.65},
+  {league:'E0',market:'H',bets:186,holdBets:58,holdROI:-8.89,profit:-28.65,maxDD:31.1839},
   {league:'E0',market:'A',bets:290,holdBets:89,holdROI:-11.23,profit:-18.06},
   {league:'E1',market:'D',bets:650,holdBets:217,holdROI:3.67,profit:-57.91},
   {league:'D1',market:'D',bets:244,holdBets:70,holdROI:12.16,profit:0.92},
@@ -33,6 +33,7 @@ function settle(games,market){
   const dates=[...new Set(games.map(g=>g.match_date))].sort();
   const split=dates[Math.floor(dates.length*.7)]||'9999-12-31';
   let bets=0,holdBets=0,holdProfit=0,profit=0;
+  const audit=[];
   for(const m of games){
     if(m.home_prior_ppg===null||m.away_prior_ppg===null||Number(m.home_prior_games)<5||Number(m.away_prior_games)<5)continue;
     const h=Number(m.home_prior_ppg),a=Number(m.away_prior_ppg),odds=Number(m.opening_home);
@@ -44,15 +45,20 @@ function settle(games,market){
     const net=won?(Math.max(1.01,odds*.99)-1)*.98:-1;
     bets++;
     profit+=net;
+    audit.push({date:m.match_date,home:m.home_team,away:m.away_team,net});
     if(m.match_date>=split){holdBets++;holdProfit+=net;}
   }
-  return {bets,holdBets,profit,holdROI:holdBets?100*holdProfit/holdBets:0};
+  audit.sort((a,b)=>a.date.localeCompare(b.date)||a.home.localeCompare(b.home)||a.away.localeCompare(b.away));
+  let equity=0,peak=0,maxDD=0;
+  for(const bet of audit){equity+=bet.net;peak=Math.max(peak,equity);maxDD=Math.max(maxDD,peak-equity);}
+  return {bets,holdBets,profit,maxDD,holdROI:holdBets?100*holdProfit/holdBets:0};
 }
 (async()=>{
   for(const b of benchmarks){
     const got=settle(await getGames(b.league,b.market),b.market);
     assert.equal(got.bets,b.bets,b.league+'/'+b.market+' bet count');
     assert.equal(got.holdBets,b.holdBets,b.league+'/'+b.market+' holdout bet count');
+    if(b.maxDD!==undefined)assert(Math.abs(got.maxDD-b.maxDD)<.02,b.league+'/'+b.market+' maximum drawdown expected '+b.maxDD+' got '+got.maxDD);
     assert(Math.abs(got.profit-b.profit)<.02,b.league+'/'+b.market+' full profit expected '+b.profit+' got '+got.profit);
     assert(Math.abs(got.holdROI-b.holdROI)<.015,b.league+'/'+b.market+' holdout ROI expected '+b.holdROI+' got '+got.holdROI);
     console.log('PASS',b.league,b.market,got.bets,got.holdBets,got.holdROI.toFixed(2)+'%');
