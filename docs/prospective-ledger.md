@@ -45,3 +45,7 @@ Created private `gerball_private.prospective_settlements` with prediction foreig
 The BEFORE INSERT trigger enforces server-generated timestamps, prevents pre-kickoff settlement, and enforces sequential revisions with a per-prediction advisory lock. An append-only UPDATE/DELETE rejection trigger prevents ordinary modifications. RLS is enabled and anon/authenticated roles have no table permissions. Verified table empty and privileges denied.
 
 **Not yet done:** trusted settlement ingestion, end-to-end tests using settled predictions, outcome verification against authoritative sources, version freeze, and live dashboard. Privileged database administrators can still alter triggers, so this is not cryptographically immutable.
+
+## Current-result reconciliation view — 2026-11-23
+
+Added `gerball_private.prospective_current_results`, a `security_invoker=true` view joining each immutable prediction with only its highest-revision settlement. Earlier corrections remain preserved in the settlement ledger. The view is private and explicitly denies anonymous and ordinary authenticated reads. Verified zero current rows and denied client-role SELECT privileges. No public dashboard or ingestion endpoint is enabled yet.
