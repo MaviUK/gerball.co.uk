@@ -13,6 +13,8 @@ jobs:
           node-version: '22'
       - name: Validate inline scripts and required navigation
         run: node scripts/check-site.cjs
+      - name: Verify selected-market summaries, chronology and CSV exports
+        run: node --test scripts/check-walkforward-calculations.mjs scripts/check-walkforward-panel.mjs
       - name: Verify daily odds collection, authentication and UK clock changes
         run: node --test scripts/check-odds-collector.mjs
       - name: Verify upcoming fixtures, public endpoint and team aliases

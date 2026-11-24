@@ -23,7 +23,8 @@ assert(html.includes('edgelab_walkforward_market'),'Missing historical multi-mar
 assert(html.includes('window.gerballLastValidation'),'Missing bet-by-bet audit trail');
 assert(html.includes('renderWalkforwardEquity(detail)'),'Missing out-of-sample equity curve');
 assert(html.includes('renderProfitUncertainty(detail)'),'Missing out-of-sample bootstrap uncertainty');
-assert(html.includes('Math.max(1.01,Number(m.opening_home)*(1-slippage))'),'Missing odds cost assumption');
+assert(html.includes('src="/assets/walkforward-calculations.js"'),'Missing shared walk-forward calculation module');
+new vm.Script(fs.readFileSync('assets/walkforward-calculations.js','utf8'),{filename:'assets/walkforward-calculations.js'});
 console.log('Validated '+scripts.length+' inline scripts, navigation and betting lab components.');
 
 // Independently verified historical benchmark: E0 August 2025, 0.5 PPG edge,
