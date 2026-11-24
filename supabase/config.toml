@@ -15,3 +15,7 @@ verify_jwt = false
 [functions.gerball-strategy-screen]
 # Modern publishable keys are checked in the handler; raw RPC access is service-only.
 verify_jwt = false
+
+[functions.gerball-recorded-screens]
+# Public application-key check; bounded saved-research reads only. Cron owns all writes.
+verify_jwt = false

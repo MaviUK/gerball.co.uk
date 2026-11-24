@@ -2,6 +2,8 @@
 
 Created: 2026-11-23. Proposed prospective start: 2026-12-01 UTC.
 
+Scope update, 2026-11-24: this draft describes the original priced, training-selected betting candidate. The fixed H/D/A form screen now has a separate [recorded research tracker](recorded-screens.md), with immutable inputs and imported outcome reconciliation. That tracker preserves the 1 December boundary and does not approve or activate this priced candidate.
+
 ## Purpose
 Evaluate whether a preselected, reproducible strategy can demonstrate positive realized net returns without reusing development data for selection.
 

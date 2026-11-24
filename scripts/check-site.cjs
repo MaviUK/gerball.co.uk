@@ -16,7 +16,7 @@ try {
     .runInNewContext({capture(value){startupHandlers=value},stopStartup});
 } catch(error) { if(error!==stopStartup)throw error; }
 for(const [index,name] of sharedHandlers.entries()) assert.equal(startupHandlers[index],'function','Startup handler is out of scope: '+name);
-for (const id of ['view-overview','view-upcoming','view-screening','view-tables','view-compare','view-betting','view-data']) assert(html.includes('id="'+id+'"'),'Missing navigation view '+id);
+for (const id of ['view-overview','view-upcoming','view-screening','view-tracking','view-tables','view-compare','view-betting','view-data']) assert(html.includes('id="'+id+'"'),'Missing navigation view '+id);
 for (const id of ['wfRun','wfRows','wfSeasonRows','wfCommission','wfSlippage','wfExport','wfEquity','wfEquitySummary','wfUncertainty','comparisonToolPicker']) assert(html.includes(id),'Missing required feature '+id);
 assert(html.includes('edgelab_walkforward_market'),'Missing historical multi-market validation RPC');
 assert(html.includes('window.gerballLastValidation'),'Missing bet-by-bet audit trail');

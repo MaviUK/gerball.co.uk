@@ -18,6 +18,7 @@ Open `https://gerball.co.uk/#upcoming` for captured bookmaker prices, team form 
 - [Upcoming fixtures and team matching](docs/upcoming-fixtures.md)
 - [Historical fixture analysis](docs/fixture-analysis.md)
 - [Historical strategy screening](docs/strategy-screen.md)
+- [Recorded screens and result tracking](docs/recorded-screens.md)
 
 ## Source licensing and data provenance
 Football-Data.co.uk publishes downloadable English football CSVs at https://www.football-data.co.uk/englandm.php.

@@ -1,5 +1,11 @@
 # Prospective prediction ledger — database foundation
 
+## Current scope — 2026-11-24
+
+The priced-prediction infrastructure now includes private ingestion approvals, a gated ingestion RPC, append-only settlement revisions and private result/performance views. The deployed `gerball-prospective-ingest` version 11 requires verified recent executable-quote provenance and retains its approval gate. At inspection on 24 November, predictions, settlements and approvals each contained zero rows.
+
+The new [Recorded screens tracker](recorded-screens.md) saves unpriced observations of the fixed historical H/D/A rules in a separate private schema. Its public read projection includes only those research observations. It does not add prices/stakes to this ledger or activate its draft strategy. The dated foundation notes below describe the earlier implementation stages.
+
 Created 2026-11-23 in Supabase project hdueztssmsvvxkwqgcnm.
 
 ## Database
