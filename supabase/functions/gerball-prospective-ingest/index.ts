@@ -1,4 +1,4 @@
-// Gerball prospective ingestion v2: authenticated, strict request validation, fail-closed.
+// Gerball prospective ingestion v4: authenticated, strict request validation, fail-closed.
 // No database write path is enabled until verified odds provenance and immutable
 // strategy approval are implemented and tested.
 const json = (status: number, error: string, extra: Record<string, unknown> = {}) =>
@@ -30,11 +30,11 @@ export function validatePrediction(p: unknown, now = Date.now()): string | null 
   if (typeof v.input_sha256 !== "string" || !/^[a-f0-9]{64}$/.test(v.input_sha256)) return "invalid_hash";
   if (!v.selection_snapshot || typeof v.selection_snapshot !== "object" || Array.isArray(v.selection_snapshot)) return "invalid_snapshot";
   if (!textField(v.kickoff_at) || !textField(v.odds_observed_at) ||
-      !/^\\d{4}-\\d{2}-\\d{2}T/.test(v.kickoff_at) ||
-      !/^\\d{4}-\\d{2}-\\d{2}T/.test(v.odds_observed_at)) return "invalid_timestamp";
+      !/^\d{4}-\d{2}-\d{2}T/.test(v.kickoff_at) ||
+      !/^\d{4}-\d{2}-\d{2}T/.test(v.odds_observed_at)) return "invalid_timestamp";
   const kickoff = Date.parse(v.kickoff_at), observed = Date.parse(v.odds_observed_at);
   if (!Number.isFinite(kickoff) || !Number.isFinite(observed) || kickoff <= now) return "invalid_kickoff";
-  if (observed > now || now - observed > 5 * 60_000) return "stale_or_future_odds";
+  if (observed >= kickoff || observed > now || now - observed > 5 * 60_000) return "stale_or_future_odds";
   return null;
 }
 
