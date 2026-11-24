@@ -34,7 +34,7 @@ async function rpc(name, body) {
   const data = await response.json();
   assert.equal(response.status, 200, name + ' must succeed' + (data?.code ? ' (' + data.code + ': ' + data.message + ')' : ''));
   assert(Array.isArray(data), name + ' must return an array');
-  timings.push({ rpc: name, rows: data.length, elapsed_ms: Math.round(performance.now() - started) });
+  timings.push({ rpc: name, scope: body, rows: data.length, elapsed_ms: Math.round(performance.now() - started) });
   return data;
 }
 
@@ -56,14 +56,21 @@ for (const row of coverage) {
 }
 
 const movement = await rpc('edgelab_odds_movement', { p_league: league, p_season: season, p_market: 'H', p_team: null });
-assert(movement.length > 0 && movement.length <= 3);
+const movementAll = await rpc('edgelab_odds_movement', { p_league: league, p_season: null, p_market: 'H', p_team: null });
+for (const data of [movement, movementAll]) {
+  assert(data.length > 0 && data.length <= 3);
+  for (const row of data) {
+    text(row.movement, 'Movement label');
+    const bets = count(row.bets, 'Movement bets');
+    assert(bets > 0 && count(row.wins, 'Movement wins') <= bets);
+    percent(row.win_pct, 'Movement win percentage');
+    assert(numeric(row.avg_open, 'Opening average') > 1.01 && numeric(row.avg_close, 'Closing average') > 1.01);
+    for (const field of ['avg_shift_pct', 'flat_profit', 'flat_roi_pct']) numeric(row[field], 'Movement ' + field);
+  }
+}
 for (const row of movement) {
-  text(row.movement, 'Movement label');
-  const bets = count(row.bets, 'Movement bets');
-  assert(bets > 0 && count(row.wins, 'Movement wins') <= bets);
-  percent(row.win_pct, 'Movement win percentage');
-  assert(numeric(row.avg_open, 'Opening average') > 1.01 && numeric(row.avg_close, 'Closing average') > 1.01);
-  for (const field of ['avg_shift_pct', 'flat_profit', 'flat_roi_pct']) numeric(row[field], 'Movement ' + field);
+  const all = movementAll.find(item => item.movement === row.movement);
+  assert(all && Number(all.bets) >= Number(row.bets), 'All-season movement must include every selected-season bucket');
 }
 
 const referees = await rpc('edgelab_referee_analysis', { p_league: league, p_season: season, p_min_matches: 5 });

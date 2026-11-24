@@ -1,13 +1,14 @@
--- Read-only deployment check for the two report-query optimizations.
+-- Read-only deployment check for the report-query optimizations.
 -- Run before and after applying the migration. The definition hash should
 -- change; signature, result type, owner, ACL, role access and settings should not.
--- Captured pre-change metadata for both functions:
+-- Captured pre-change metadata for all three functions:
 -- owner=postgres; SECURITY INVOKER; STABLE; search_path=public;
 -- ACL={=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres}.
 WITH expected(signature, before_md5) AS (
   VALUES
     ('public.edgelab_data_coverage(text,text)', '11cd4ba83290caf4e169742ec637005c'),
-    ('public.edgelab_team_history(text,text)', '518758d41c67aebf44c730e93b199ba5')
+    ('public.edgelab_team_history(text,text)', '518758d41c67aebf44c730e93b199ba5'),
+    ('public.edgelab_odds_movement(text,text,text,text)', 'c0797af8e8bf89d4d175cb59ecb20ba2')
 )
 SELECT expected.signature,
   expected.before_md5,

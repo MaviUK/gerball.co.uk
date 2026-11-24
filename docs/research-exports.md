@@ -40,14 +40,15 @@ Changing a base calculation input invalidates the comparison. Derived selectors 
 
 Historical qualification, settlement and profit calculations retain their existing definitions. The draft prospective candidate specification and its approval state remain separate from these report downloads.
 
-## Coverage and history query performance
+## Research query performance
 
-Live browser verification also exposed statement timeouts in the existing data-coverage and team-history RPCs. Their optimized query plans retain the same arguments, result fields, access rules and calculations:
+Live browser and deployment verification also exposed statement timeouts in the existing data-coverage, team-history and odds-movement RPCs. Their optimized query plans retain the same arguments, result fields, access rules and calculations:
 
 - Coverage uses mutually exclusive branches for the optional league and season filters, allowing each selected scope to use the existing indexes. It materializes the selected source rows once before counting the same 13 fields.
 - Team history first identifies the requested team's league and season partitions, then calculates complete standings within those partitions. Other teams in each relevant season still contribute to the table and rank.
+- Odds movement separates its selected-season and all-season reads and materializes the parsed opening and closing prices once per fixture. Its existing price parsing, movement buckets, settlement and arithmetic are preserved.
 
-Both functions remain stable security-invoker functions with their existing grants and search path. No timeout limit, archive record, importer or collection schedule is changed.
+All three functions remain stable security-invoker functions with their existing grants and search path. No timeout limit, archive record, importer or collection schedule is changed. Referee, finishing and discipline queries retain their existing definitions after bounded execution checks.
 
 ## Verification
 
