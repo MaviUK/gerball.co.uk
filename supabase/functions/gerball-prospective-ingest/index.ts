@@ -38,13 +38,39 @@ export function validatePrediction(p: unknown, now = Date.now()): string | null 
   return null;
 }
 
+// SHA-256 fixed-length comparison avoids timing differences on token characters.
+async function digest(value: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
+}
+async function constantTimeTokenMatch(actual: string, expected: string): Promise<boolean> {
+  const [a, b] = await Promise.all([digest(actual), digest(expected)]);
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method !== "POST") return json(405, "method_not_allowed");
-  // Explicit global kill switch takes precedence over all request handling.
-  if (Deno.env.get("PROSPECTIVE_INGESTION_ENABLED") !== "true") return json(503, "prospective_ingestion_inactive");
+  if (Deno.env.get("PROSPECTIVE_INGESTION_ENABLED") !== "true")
+    return json(503, "prospective_ingestion_inactive");
   const expected = Deno.env.get("GERBALL_INGEST_TOKEN");
-  if (!expected || expected.length < 32) return json(503, "ingestion_secret_not_configured");
-  // Authorization is deliberately not enabled until a constant-time credential
-  // verifier and operator allowlist are deployed. Never compare secrets directly.
-  return json(503, "trusted_auth_and_odds_provenance_not_configured");
+  const operatorList = Deno.env.get("GERBALL_INGEST_OPERATORS");
+  if (!expected || expected.length < 32 || !operatorList)
+    return json(503, "ingestion_auth_not_configured");
+  const operator = request.headers.get("x-gerball-operator") ?? "";
+  const allowedOperators = operatorList.split(",").map(v => v.trim()).filter(Boolean);
+  const supplied = request.headers.get("x-gerball-ingest-token") ?? "";
+  if (!allowedOperators.includes(operator) || !supplied ||
+      !(await constantTimeTokenMatch(supplied, expected))) return json(401, "unauthorized");
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith("application/json")) return json(415, "unsupported_media_type");
+  const raw = await request.text();
+  if (raw.length > 16_384) return json(413, "payload_too_large");
+  let payload: unknown;
+  try { payload = JSON.parse(raw); } catch { return json(400, "invalid_json"); }
+  const validationError = validatePrediction(payload);
+  if (validationError) return json(422, validationError);
+  // Even authenticated, validated requests must not be written until an
+  // independently verified odds adapter and approved strategy are in place.
+  return json(503, "verified_odds_provenance_not_configured");
 });
