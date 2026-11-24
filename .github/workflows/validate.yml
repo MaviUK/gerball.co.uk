@@ -15,6 +15,10 @@ jobs:
         run: node scripts/check-site.cjs
       - name: Verify selected-market summaries, chronology and CSV exports
         run: node --test scripts/check-walkforward-calculations.mjs scripts/check-walkforward-panel.mjs
+      - name: Verify research CSV bytes, captured settings and report request lifecycle
+        run: node --test scripts/check-research-report-state.mjs scripts/check-research-audit.mjs
+      - name: Verify deployed research reports and archive coverage queries
+        run: node scripts/check-live-research-reports.mjs
       - name: Verify daily odds collection, authentication and UK clock changes
         run: node --test scripts/check-odds-collector.mjs
       - name: Verify upcoming fixtures, public endpoint and team aliases

@@ -25,6 +25,11 @@ assert(html.includes('renderWalkforwardEquity(detail)'),'Missing out-of-sample e
 assert(html.includes('renderProfitUncertainty(detail)'),'Missing out-of-sample bootstrap uncertainty');
 assert(html.includes('src="/assets/walkforward-calculations.js"'),'Missing shared walk-forward calculation module');
 new vm.Script(fs.readFileSync('assets/walkforward-calculations.js','utf8'),{filename:'assets/walkforward-calculations.js'});
+for (const name of ['research-csv', 'research-audit']) {
+  const filename = 'assets/' + name + '.js';
+  assert(html.includes('src="/' + filename + '"'), 'Missing research export module ' + name);
+  new vm.Script(fs.readFileSync(filename, 'utf8'), { filename });
+}
 assert(html.includes('href="/assets/captured-prices.css"'),'Missing captured prices styles');
 assert(html.includes('src="/assets/captured-prices.js"'),'Missing captured prices dialog');
 assert(html.indexOf('src="/assets/captured-prices.js"') < html.indexOf('src="/assets/fixture-analysis.js"'),'Captured prices must load before its analysis integration');
@@ -95,37 +100,42 @@ assert.equal(elements.wfReconciliationRows.rows.length,1,'Must show season audit
 assert.equal(execute([{...valid,reportedBets:3}]),false,'Bet-count mismatch must block export');
 assert.equal(execute([{...valid,reportedProfit:0.8}]),false,'Profit mismatch must block export');
 assert.equal(execute([]),false,'Empty audit must block export');
-assert(html.includes("if(!window.gerballForwardAuditOK)"),'Audit export must be gated by reconciliation');
 assert(html.includes("function exportForwardAudit()"),'Audit CSV export missing');
-assert(html.includes("lines.join('\\r\\n')"),'CSV rows must use CRLF separators');
 assert(html.includes("['wager_reconciliation','wfReconciliationRows']"),'CSV must include reconciliation rows');
-console.log('Forward-audit reconciliation and CSV export regression checks passed.');
+console.log('Forward-audit reconciliation regression checks passed.');
 
 (async()=>{
 const exportSource=html.match(/function exportForwardAudit\(\)\{[\s\S]*?\}\nfunction exportWagerDifferences\(\)/);
 assert(exportSource,'Missing complete forward CSV exporter');
 const exportFn=exportSource[0].slice(0,-'\nfunction exportWagerDifferences()'.length);
-const cells=values=>({querySelectorAll:()=>values.map(textContent=>({textContent}))});
-const makeTable=(head,rows)=>({querySelectorAll:selector=>selector==='thead th'?head.map(textContent=>({textContent})):[]});
-const makeBody=(head,rows)=>({closest:()=>makeTable(head,rows),querySelectorAll:()=>rows.map(cells),querySelector:()=>rows.length?cells(rows[0]):null});
-const auditDom={
- wfForwardMinTraining:{value:'30'},wfForwardConsistency:{value:'0'},wfOddsMin:{value:'1.5'},wfOddsMax:{value:'4'},
- wfForwardStatus:{textContent:''},
- wfForwardRows:makeBody(['Season','League','Market','Training seasons','Training bets','Training ROI','Test bets','Test profit','Test ROI'],[['2526','E0','Home','2','80','5.00%','2','0.75','37.50%']]),
- wfReconciliationRows:makeBody(['Season','League','Market','Reported bets','Wager count','Reported profit','Wager profit','Check'],[['2526','E0','Home','2','2','0.7500','0.7500','MATCH']])
-};
 let capturedBlob=null,downloads=0;
 const mockURL={createObjectURL(blob){capturedBlob=blob;return 'blob:test'},revokeObjectURL(){}};
 const mockDocument={body:{appendChild(){}},createElement(){return {click(){downloads++},remove(){}}}};
-const exportWindow={gerballForwardAuditOK:true};
-const exportRunner=new Function('window','$','document','Blob','URL','setTimeout',exportFn+';exportForwardAudit()');
-exportRunner(exportWindow,id=>auditDom[id],mockDocument,Blob,mockURL,()=>{});
+const exportWindow={gerballForwardAuditOK:true,document:mockDocument,Blob,URL:mockURL,setTimeout:()=>{}};
+exportWindow.window=exportWindow;
+for(const filename of ['assets/research-csv.js','assets/research-audit.js']) new vm.Script(fs.readFileSync(filename,'utf8'),{filename}).runInNewContext(exportWindow);
+const settings={scope:'selected',country:'England',league:'E0',leagues:['E0'],from:'2023-07-01',to:'2026-06-30',adv:0.5,min:1.5,max:4,commission:0.02,slippage:0.01};
+const derived={minimum_training_bets:30,minimum_profitable_training_season_fraction:0,ranking_basis:'holdout',ranking_minimum_test_bets:30,ranking_minimum_assessed_seasons:2,ranking_positive_season_fraction:0,difference_consistency_fraction:0.5};
+const settled=[{fixture_id:'loss-1',date:'2026-01-01',league:'E0',home:'Alpha',away:'Beta',market_code:'H',market:'Home',odds:2.8,won:false,net:-1},{fixture_id:'win-2',date:'2026-01-02',league:'E0',home:'Gamma',away:'Delta',market_code:'H',market:'Home',odds:2.8,won:true,net:1.75}];
+const input={settings,derived,completed_at:'2026-11-24T12:00:00Z',sections:[
+ {key:'forward_selections',headings:['Season','League','Market','Training seasons','Training bets','Training ROI','Test bets','Test profit','Test ROI'],rows:[['2526','E0','Home','2','80','5.00%','2','0.75','37.50%']]},
+ {key:'wager_reconciliation',headings:['Season','League','Market','Reported bets','Wager count','Reported profit','Wager profit','Check'],rows:[['2526','E0','Home','2','2','0.7500','0.7500','MATCH']]}
+],forwardSelections:[{...valid,wagers:settled}],wagerDifferences:[],validationSummaries:[]};
+exportWindow.gerballMarketComparison=exportWindow.GerballResearchAudit.snapshot(input);
+const exportStatus={textContent:''};
+const getExportElement=id=>{assert.equal(id,'wfForwardStatus','Export must not reread current input controls or tables');return exportStatus};
+const exportRunner=new Function('window','$',exportFn+';exportForwardAudit()');
+exportRunner(exportWindow,getExportElement);
 assert.equal(downloads,1,'Valid export must initiate one download');
 assert(capturedBlob,'CSV blob must be produced');
+const csvBytes=new Uint8Array(await capturedBlob.arrayBuffer());
+assert.deepEqual([...csvBytes.slice(0,3)],[239,187,191],'CSV must contain a real UTF-8 BOM');
 const exportedCSV=await capturedBlob.text();
 const csvLines=exportedCSV.replace(/^\uFEFF/,'').split('\r\n');
+assert(csvLines.length>5,'CSV must contain actual CRLF separators');
 const parseCSV=line=>[...line.matchAll(/"((?:[^"]|"")*)"|([^,]+)/g)].map(m=>(m[1]??m[2]).replace(/""/g,'"'));
 const records=csvLines.map(parseCSV);
+assert(records.every(row=>row.length===records[0].length),'All audit CSV records must have the same width');
 const getRow=(section,type)=>records.find(row=>row[0]===section&&row[1]===type);
 const forwardRow=getRow('forward_selections','data'),reconciledRow=getRow('wager_reconciliation','data');
 assert(forwardRow&&reconciledRow,'CSV must contain forward selection and reconciliation');
@@ -135,12 +145,23 @@ assert.equal(Number(reconciledRow[8]),independentNet,'Exported reconciliation pr
 assert.equal(Number(forwardRow[8]),2,'Exported bet count must match wager count');
 assert.equal(Number(reconciledRow[6]),2,'Exported reconciled wager count must match');
 assert.equal(reconciledRow[9],'MATCH','Exported reconciliation status must match');
-assert.equal(getRow('metadata','settings')[2],'minimum_training_bets','CSV must preserve training settings');
+const wagerHead=getRow('settled_wagers','header'),wagerRows=records.filter(row=>row[0]==='settled_wagers'&&row[1]==='data');
+assert.equal(wagerRows.length,2,'CSV must retain the actual settled wagers');
+assert.deepEqual(wagerRows.map(row=>row[wagerHead.indexOf('fixture_id')]),['loss-1','win-2']);
+assert.equal(wagerRows[0][wagerHead.indexOf('net_units')],'-1','Losses must remain numeric, without an apostrophe');
+assert.equal(wagerRows.reduce((sum,row)=>sum+Number(row[wagerHead.indexOf('net_units')]),0),independentNet);
+const metadata=key=>records.find(row=>row[0]==='metadata'&&row[1]==='setting'&&row[2]===key)?.[3];
+assert.equal(metadata('minimum_training_bets'),'30','CSV must preserve captured training settings');
+assert.equal(metadata('odds_min'),'1.5','CSV must preserve the accepted odds range');
+assert.equal(metadata('commission_pct'),'2','CSV must preserve the accepted costs');
 exportWindow.gerballForwardAuditOK=false;
-exportRunner(exportWindow,id=>auditDom[id],mockDocument,Blob,mockURL,()=>{});
+exportRunner(exportWindow,getExportElement);
 assert.equal(downloads,1,'Failed reconciliation must not download CSV');
-console.log('Generated CSV values independently reconcile with settled wager totals; export gating passed.');
-
+exportWindow.gerballForwardAuditOK=true;
+exportWindow.gerballMarketComparison=exportWindow.GerballResearchAudit.snapshot({...input,forwardSelections:[{...valid,reportedProfit:0.8,wagers:settled}]});
+exportRunner(exportWindow,getExportElement);
+assert.equal(downloads,1,'A mismatched captured result must also block export');
+console.log('Actual audit CSV bytes, captured settings, wager identities and numeric totals reconcile; export gating passed.');
 
 const bootstrapMatch=html.match(/function seasonBootstrapROI\(blocks,threshold\)\{[\s\S]*?\}\nfunction renderSeasonBootstrap\(/);
 assert(bootstrapMatch,'Missing season-block bootstrap implementation');
