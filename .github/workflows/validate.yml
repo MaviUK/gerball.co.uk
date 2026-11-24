@@ -15,5 +15,7 @@ jobs:
         run: node scripts/check-site.cjs
       - name: Verify daily odds collection, authentication and UK clock changes
         run: node --test scripts/check-odds-collector.mjs
+      - name: Verify upcoming fixtures, public endpoint and team aliases
+        run: node --test scripts/check-upcoming-endpoint.mjs scripts/check-upcoming-ui.mjs scripts/check-upcoming-bridge.mjs scripts/check-team-aliases.mjs
       - name: Reconcile live historical league-market benchmarks
         run: node scripts/check-live-benchmarks.cjs

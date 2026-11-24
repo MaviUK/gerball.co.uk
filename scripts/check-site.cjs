@@ -5,7 +5,18 @@ const html = fs.readFileSync('index.html','utf8');
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(Boolean);
 assert(scripts.length>0,'Missing inline JavaScript');
 for (const [i,src] of scripts.entries()) new vm.Script(src,{filename:'index.html script '+(i+1)});
-for (const id of ['view-overview','view-tables','view-compare','view-betting','view-data']) assert(html.includes('id="'+id+'"'),'Missing navigation view '+id);
+// Function declarations are hoisted before the first statement. Probe the real
+// script's outer scope without running DOM operations, to catch handlers hidden
+// inside a click callback (which previously stopped all navigation at startup).
+const sharedHandlers=['exportForwardAudit','exportWagerDifferences','renderWagerDifferences','exportProspectiveCandidate','exportValidationDashboard'];
+let startupHandlers;
+const stopStartup={};
+try {
+  new vm.Script('capture(['+sharedHandlers.map(name=>'typeof '+name).join(',')+']);throw stopStartup;\n'+scripts[0])
+    .runInNewContext({capture(value){startupHandlers=value},stopStartup});
+} catch(error) { if(error!==stopStartup)throw error; }
+for(const [index,name] of sharedHandlers.entries()) assert.equal(startupHandlers[index],'function','Startup handler is out of scope: '+name);
+for (const id of ['view-overview','view-upcoming','view-tables','view-compare','view-betting','view-data']) assert(html.includes('id="'+id+'"'),'Missing navigation view '+id);
 for (const id of ['wfRun','wfRows','wfSeasonRows','wfCommission','wfSlippage','wfExport','wfEquity','wfEquitySummary','wfUncertainty','comparisonToolPicker']) assert(html.includes(id),'Missing required feature '+id);
 assert(html.includes('edgelab_walkforward_market'),'Missing historical multi-market validation RPC');
 assert(html.includes('window.gerballLastValidation'),'Missing bet-by-bet audit trail');

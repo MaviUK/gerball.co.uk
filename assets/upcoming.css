@@ -1,0 +1,115 @@
+.upcoming-workspace { min-width: 0; }
+.upcoming-workspace [hidden] { display: none !important; }
+.upcoming-workspace section { margin: 0 0 18px; }
+.upcoming-intro { border-color: #36566b; }
+.upcoming-intro-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.upcoming-intro-header h2 { margin: 8px 0; }
+.upcoming-intro-header p { margin: 0; max-width: 650px; font-size: 14px; }
+.upcoming-eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .14em; color: #76dfc2; }
+.upcoming-refresh { width: auto; flex: 0 0 auto; }
+.upcoming-refresh:disabled { opacity: .65; cursor: wait; }
+.upcoming-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 9px 16px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #2e425b; }
+.upcoming-captured { margin: 0; color: #c4d4e7; font-size: 12px; font-variant-numeric: tabular-nums; }
+.upcoming-mapping-coverage { color: #a8c0d5; font-size: 11px; }
+.upcoming-state { display: inline-flex; align-items: center; border: 1px solid #365b54; padding: 4px 9px; border-radius: 6px; color: #91dfc5; background: #16362f; font-size: 11px; font-weight: 650; }
+.upcoming-state-warning { color: #efce8e; border-color: #78633e; background: #392e1d; }
+.upcoming-explanation { margin: 12px 0 0; color: #a5b7cc; font-size: 12px; max-width: 900px; }
+.upcoming-filters { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.35fr; gap: 14px; padding: 18px; }
+.upcoming-filter { min-width: 0; }
+.upcoming-filter label { font-size: 12px; }
+.upcoming-filter input, .upcoming-filter select { min-width: 0; width: 100%; }
+.upcoming-results-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 2px 15px; }
+.upcoming-results-status { margin: 0; font-size: 13px; color: #bacde1; }
+.upcoming-clear { width: auto; padding: 7px 4px; min-height: 38px; background: none; color: #9bcbf0; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.upcoming-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.upcoming-fixture { min-width: 0; margin: 0; padding: 20px; }
+.upcoming-fixture-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11px; }
+.upcoming-league { color: #95b4d4; font-weight: 650; }
+.upcoming-kickoff { color: #c8d9ea; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.upcoming-teams { display: grid; grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr); align-items: center; gap: 10px; margin: 20px 0; }
+.upcoming-team { min-width: 0; }
+.upcoming-team:last-child { text-align: right; }
+.upcoming-team-link, .upcoming-team-name { display: block; font-size: 17px; line-height: 1.35; font-weight: 750; color: #edf4ff; overflow-wrap: anywhere; }
+.upcoming-team-link { min-height: 0; width: auto; max-width: 100%; padding: 0; border: 0; border-radius: 3px; text-align: inherit; background: none; }
+.upcoming-team:last-child .upcoming-team-link { margin-left: auto; }
+.upcoming-team-link:hover { color: #92d5ff; text-decoration: underline; text-underline-offset: 4px; }
+.upcoming-team-note { display: block; color: #96acc5; margin-top: 5px; font-size: 10px; }
+.upcoming-team-stats { display: block; margin-top: 9px; color: #bdcfdf; font-size: 11px; font-weight: 500; }
+.upcoming-team-season { display: block; color: #8da5bf; font-size: 10px; margin-top: 2px; }
+.upcoming-form { display: flex; gap: 4px; margin-top: 7px; }
+.upcoming-team:last-child .upcoming-form { justify-content: flex-end; }
+.upcoming-form-result { display: inline-flex; width: 21px; height: 21px; justify-content: center; align-items: center; border-radius: 4px; background: #354356; color: #dbe8f6; font-size: 10px; font-weight: 750; }
+.upcoming-form-w { background: #164639; color: #9ce7c5; }
+.upcoming-form-l { background: #4e2937; color: #f3b0ba; }
+.upcoming-versus { color: #7991ae; text-align: center; font-size: 12px; }
+.upcoming-odds-heading { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: #a7bad0; }
+.upcoming-odds { display: grid; gap: 6px; }
+.upcoming-odds-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.upcoming-odds-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.upcoming-odds-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.upcoming-quote { min-width: 0; background: #0c1a2d; border: 1px solid #304761; border-radius: 8px; padding: 9px 5px; text-align: center; }
+.upcoming-market-label { display: block; color: #afc1d6; font-size: 10px; white-space: nowrap; }
+.upcoming-price { display: block; color: #83e0bd; font-size: 20px; line-height: 1.5; font-weight: 800; font-variant-numeric: tabular-nums; }
+.upcoming-price-missing { color: #7f94ad; }
+.upcoming-bookmaker { display: block; color: #a3b9d2; font-size: 9px; line-height: 1.35; overflow-wrap: anywhere; }
+.upcoming-quote-time { display: block; margin-top: 5px; color: #98aec6; font-size: 9px; line-height: 1.4; }
+.upcoming-fixture-capture { margin: 9px 0 0; color: #91a8c0; font-size: 10px; }
+.upcoming-details { margin-top: 17px; border-top: 1px solid #2a4059; padding-top: 13px; min-width: 0; }
+.upcoming-details summary { cursor: pointer; color: #a9d4f5; width: fit-content; max-width: 100%; padding: 4px 0; font-size: 12px; font-weight: 600; }
+.upcoming-details[open] summary { margin-bottom: 12px; }
+.upcoming-detail-status { margin: 10px 0; color: #aec5dc; font-size: 12px; }
+.upcoming-comparison-scroll { overflow-x: auto; max-width: 100%; border: 1px solid #2d435e; border-radius: 8px; -webkit-overflow-scrolling: touch; }
+.upcoming-comparison { min-width: 590px; font-size: 11px; }
+.upcoming-comparison th, .upcoming-comparison td { padding: 10px 8px; }
+.upcoming-comparison th { position: static; font-size: 10px; }
+.upcoming-comparison th[scope="row"] { background: transparent; text-transform: none; letter-spacing: normal; color: #d1e0f0; font-size: 11px; }
+.upcoming-comparison td { text-align: center; vertical-align: top; }
+.upcoming-comparison th:not(:first-child) { text-align: center; }
+.upcoming-comparison td strong { display: block; font-size: 12px; }
+.upcoming-comparison td small { display: block; font-size: 9px; white-space: nowrap; margin-top: 3px; }
+.upcoming-best { color: #83e0bd; }
+.upcoming-table-caption { padding: 10px; text-align: left; font-size: 10px; color: #a8bfd6; background: #102039; caption-side: top; }
+.upcoming-more { display: block; width: auto; min-width: 220px; margin: 22px auto 0; }
+.upcoming-empty { grid-column: 1 / -1; padding: 38px 22px; text-align: center; }
+.upcoming-empty h3 { margin: 0 0 8px; font-size: 18px; }
+.upcoming-empty p { margin: 0; font-size: 13px; }
+.upcoming-notice { margin-bottom: 18px; padding: 16px; border: 1px solid #7d633a; border-radius: 10px; background: #33291f; color: #ecd2a4; font-size: 13px; }
+.upcoming-notice p { margin: 0; }
+.upcoming-retry { margin-top: 10px; width: auto; }
+.upcoming-workspace :is(button, summary, [tabindex="0"]):focus-visible { outline: 2px solid #83e0bd; outline-offset: 4px; }
+@media (max-width: 1100px) {
+  .upcoming-list { grid-template-columns: 1fr; }
+  .upcoming-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .upcoming-fixture { padding: 19px; }
+  .upcoming-price { font-size: 23px; }
+  .upcoming-bookmaker { font-size: 10px; }
+}
+@media (max-width: 600px) {
+  .upcoming-intro-header { flex-direction: column; gap: 15px; }
+  .upcoming-refresh { min-height: 40px; padding: 8px 13px; font-size: 12px; }
+  .upcoming-intro-header h2 { font-size: 21px; }
+  .upcoming-intro-header p { font-size: 13px; }
+  .upcoming-filters { padding: 15px; gap: 12px 9px; }
+  .upcoming-filter input, .upcoming-filter select { padding: 10px 8px; font-size: 13px; }
+  .upcoming-fixture { padding: 16px 12px; }
+  .upcoming-fixture-meta { font-size: 10px; }
+  .upcoming-teams { margin: 18px 0; gap: 8px; }
+  .upcoming-team-link, .upcoming-team-name { font-size: 16px; }
+  .upcoming-odds { gap: 4px; }
+  .upcoming-quote { padding: 9px 3px; }
+  .upcoming-price { font-size: 20px; }
+  .upcoming-market-label { font-size: 9px; }
+  .upcoming-bookmaker { font-size: 9px; }
+  .upcoming-results-status { font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .upcoming-odds-5 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .upcoming-odds-5 .upcoming-quote { grid-column: span 2; }
+  .upcoming-odds-5 .upcoming-quote:nth-child(n+4) { grid-column: span 3; }
+  .upcoming-market-label { font-size: 11px; }
+  .upcoming-bookmaker, .upcoming-quote-time { font-size: 10px; }
+  .upcoming-odds { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .upcoming-workspace button { transition: none; }
+}
