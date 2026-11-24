@@ -1,0 +1,5 @@
+project_id = "gerball"
+
+[functions.gerball-odds-collector]
+# The handler verifies a private Vault-backed token before any provider call.
+verify_jwt = false
