@@ -19,5 +19,9 @@ jobs:
         run: node --test scripts/check-upcoming-endpoint.mjs scripts/check-upcoming-ui.mjs scripts/check-upcoming-bridge.mjs scripts/check-team-aliases.mjs
       - name: Verify historical fixture analysis and sample handling
         run: node --test scripts/check-fixture-analysis-endpoint.mjs scripts/check-fixture-analysis-ui.mjs
+      - name: Verify historical strategy screening and price-independent qualification
+        run: node --test scripts/check-strategy-screen-endpoint.mjs scripts/check-strategy-screen-ui.mjs scripts/check-strategy-screen-bridge.mjs
+      - name: Reconcile the deployed historical strategy screen
+        run: node scripts/check-live-strategy-screen.mjs
       - name: Reconcile live historical league-market benchmarks
         run: node scripts/check-live-benchmarks.cjs

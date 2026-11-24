@@ -11,3 +11,7 @@ verify_jwt = false
 [functions.gerball-fixture-analysis]
 # Public read-only historical statistics, with a service-only database RPC.
 verify_jwt = false
+
+[functions.gerball-strategy-screen]
+# Modern publishable keys are checked in the handler; raw RPC access is service-only.
+verify_jwt = false
