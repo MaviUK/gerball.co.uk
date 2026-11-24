@@ -288,6 +288,14 @@
       const teams = element('div', 'upcoming-teams');
       teams.append(renderTeam(fixture.home, fixture, 'home'), element('span', 'upcoming-versus', 'v'), renderTeam(fixture.away, fixture, 'away'));
       card.appendChild(teams);
+      if (typeof options.onMatchAnalysis === 'function') {
+        const analysis = button('Match analysis', 'secondary upcoming-analysis-button', () => {
+          options.onMatchAnalysis({ fixture, returnFocus: analysis });
+        });
+        analysis.dataset.upcomingFocus = `analysis:${fixture.event_id}`;
+        analysis.setAttribute('aria-label', `Historical match analysis: ${fixture.home?.provider_name || 'Home team'} versus ${fixture.away?.provider_name || 'Away team'}`);
+        card.appendChild(analysis);
+      }
       const oddsHeading = element('p', 'upcoming-odds-heading', 'Best captured odds · provider update times shown');
       card.appendChild(oddsHeading);
       const odds = element('div', `upcoming-odds upcoming-odds-${keys.length}`);

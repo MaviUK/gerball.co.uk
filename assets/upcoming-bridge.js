@@ -61,6 +61,11 @@
       workspace = window.GerballUpcoming.init({
         endpoint: CLOUD_URL + '/functions/v1/gerball-upcoming-fixtures',
         onTeamOpen: openHistoricalTeam,
+        onMatchAnalysis: ({ fixture, returnFocus }) => window.GerballFixtureAnalysis.open({
+          fixture,
+          returnFocus,
+          endpoint: CLOUD_URL + '/functions/v1/gerball-fixture-analysis',
+        }),
       });
     }
   }
