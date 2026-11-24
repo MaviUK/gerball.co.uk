@@ -27,5 +27,9 @@ jobs:
         run: node --test scripts/check-recorded-screens-endpoint.mjs scripts/check-recorded-screens-ui.mjs scripts/check-recorded-screens-bridge.mjs
       - name: Verify deployed recorded screens and saved cohort replay
         run: node scripts/check-live-recorded-screens.mjs
+      - name: Verify data status, read-only access and coverage display
+        run: node --test scripts/check-data-status-endpoint.mjs scripts/check-data-status-ui.mjs scripts/check-data-status-bridge.mjs
+      - name: Verify deployed data status and server-only database access
+        run: node scripts/check-live-data-status.mjs
       - name: Reconcile live historical league-market benchmarks
         run: node scripts/check-live-benchmarks.cjs

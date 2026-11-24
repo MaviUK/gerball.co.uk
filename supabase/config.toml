@@ -19,3 +19,7 @@ verify_jwt = false
 [functions.gerball-recorded-screens]
 # Public application-key check; bounded saved-research reads only. Cron owns all writes.
 verify_jwt = false
+
+[functions.gerball-data-status]
+# The handler checks the public application key and returns a bounded status projection.
+verify_jwt = false

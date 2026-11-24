@@ -19,10 +19,10 @@ Open `https://gerball.co.uk/#upcoming` for captured bookmaker prices, team form 
 - [Historical fixture analysis](docs/fixture-analysis.md)
 - [Historical strategy screening](docs/strategy-screen.md)
 - [Recorded screens and result tracking](docs/recorded-screens.md)
+- [Data status and coverage](docs/data-status.md)
 
 ## Source licensing and data provenance
-Football-Data.co.uk publishes downloadable English football CSVs at https://www.football-data.co.uk/englandm.php.
-Do not schedule automated retrieval, redistribute their datasets, or expose their rows through the public database without confirming permission and the appropriate licence. The manual CSV importer is available for user-provided files. A licensed ingestion pipeline can be added after rights are confirmed.
+Football-Data.co.uk publishes downloadable football CSVs at https://www.football-data.co.uk/englandm.php. The configured current-season importer runs on Mondays and Fridays at 08:15 UTC. Data status reports the rows and result dates actually stored; the importer does not currently persist a complete run audit. The manual CSV importer remains available for user-provided local research files. Source access and reuse must remain within the project's agreed permissions.
 
 ## Current limitations
 
