@@ -25,6 +25,10 @@ assert(html.includes('renderWalkforwardEquity(detail)'),'Missing out-of-sample e
 assert(html.includes('renderProfitUncertainty(detail)'),'Missing out-of-sample bootstrap uncertainty');
 assert(html.includes('src="/assets/walkforward-calculations.js"'),'Missing shared walk-forward calculation module');
 new vm.Script(fs.readFileSync('assets/walkforward-calculations.js','utf8'),{filename:'assets/walkforward-calculations.js'});
+assert(html.includes('href="/assets/captured-prices.css"'),'Missing captured prices styles');
+assert(html.includes('src="/assets/captured-prices.js"'),'Missing captured prices dialog');
+assert(html.indexOf('src="/assets/captured-prices.js"') < html.indexOf('src="/assets/fixture-analysis.js"'),'Captured prices must load before its analysis integration');
+new vm.Script(fs.readFileSync('assets/captured-prices.js','utf8'),{filename:'assets/captured-prices.js'});
 console.log('Validated '+scripts.length+' inline scripts, navigation and betting lab components.');
 
 // Independently verified historical benchmark: E0 August 2025, 0.5 PPG edge,

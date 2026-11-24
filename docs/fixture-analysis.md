@@ -44,6 +44,8 @@ The Edge Function uses the built-in server-side service-role credential to call 
 
 The function is intentionally configured with `verify_jwt = false` for this public read-only view. Successful HTTP responses have a 60-second cache lifetime; error responses are uncached. The dialog loads on demand, cancels superseded requests and reuses a short-lived cache by fixture and window. Close/Escape returns keyboard focus to the fixture action.
 
+**Captured prices** opens that same event's stored bookmaker comparison above the analysis dialog. Closing it returns to the chosen historical sample and venue, with focus on the price action. The history request and historical calculations remain independent of prices. See [Captured prices](captured-prices.md).
+
 ## Deployment and checks
 
 Apply the committed `gerball_fixture_analysis` migration to project `hdueztssmsvvxkwqgcnm`, deploy the `gerball-fixture-analysis` Edge Function, then publish the frontend through the existing GitHub `main` to Netlify deployment. No new secrets, importer settings or collection schedules are required.

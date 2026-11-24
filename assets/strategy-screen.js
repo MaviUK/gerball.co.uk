@@ -236,15 +236,29 @@
       detail.addEventListener('toggle', () => { if (detail.open) state.openDetails.add(detailKey); else state.openDetails.delete(detailKey); });
       const dates = make('div', 'ss-date-grid'); dates.append(dateGroups(fixture.home, 'home'), dateGroups(fixture.away, 'away'));
       detail.append(make('p', 'ss-date-note', 'Newest dates first. Every game on a selected date contributes points and games; PPG is total points divided by total games.'), dates); card.appendChild(detail);
+      const actions = make('div', 'ss-fixture-actions');
+      const actionError = make('p', 'ss-analysis-error'); actionError.hidden = true; actionError.setAttribute('role', 'status');
       if (typeof options.onMatchAnalysis === 'function') {
         const analysis = button('Match analysis', 'ss-analysis-button', async () => {
-          try { await options.onMatchAnalysis({ fixture, returnFocus: analysis }); }
-          catch { error.textContent = 'Match analysis could not be opened. Please try again.'; error.hidden = false; }
+          actionError.hidden = true;
+          try { await options.onMatchAnalysis({ fixture, returnFocus: analysis, market }); }
+          catch { actionError.textContent = 'Match analysis could not be opened. Please try again.'; actionError.hidden = false; }
         });
         analysis.setAttribute('aria-label', `Historical match analysis for ${fixture.home?.provider_name || 'home team'} and ${fixture.away?.provider_name || 'away team'}`);
         analysis.dataset.screenFocus = `analysis:${fixture.event_id}`;
-        const error = make('p', 'ss-analysis-error'); error.hidden = true; error.setAttribute('role', 'status'); card.append(analysis, error);
+        actions.appendChild(analysis);
       }
+      if (typeof options.onCapturedPrices === 'function') {
+        const prices = button('Captured prices', 'ss-prices-button', async () => {
+          actionError.hidden = true;
+          try { await options.onCapturedPrices({ fixture, returnFocus: prices, market }); }
+          catch { actionError.textContent = 'Captured prices could not be opened. Please try again.'; actionError.hidden = false; }
+        });
+        prices.setAttribute('aria-label', `Captured prices for ${fixture.home?.provider_name || 'home team'} and ${fixture.away?.provider_name || 'away team'}`);
+        prices.dataset.screenFocus = `prices:${fixture.event_id}`;
+        actions.appendChild(prices);
+      }
+      if (actions.children.length) card.append(actions, actionError);
       return card;
     }
     function renderFixtures(force = false) {

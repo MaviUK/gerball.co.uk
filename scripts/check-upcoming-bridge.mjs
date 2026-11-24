@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../assets/upcoming-bridge.js', import.meta.url), 'utf8');
 
 function harness({ visible = false, today = '2026-11-24T18:00:00Z' } = {}) {
-  const nodes = new Map(), events = new Map(), calls = { init: 0, table: [], profile: [], close: 0, navigation: [] };
+  const nodes = new Map(), events = new Map(), calls = { init: 0, activate: 0, table: [], profile: [], close: 0, navigation: [], analysis: [], prices: [] };
   let options;
   const node = (id = '') => ({
     id, value: '', hidden: false, options: [], children: [], listeners: {},
@@ -26,7 +26,9 @@ function harness({ visible = false, today = '2026-11-24T18:00:00Z' } = {}) {
   };
   const window = {
     addEventListener(name, listener) { events.set(name, listener); },
-    GerballUpcoming: { init(config) { options = config; calls.init++; return { retainedFilter: 'Arsenal' }; } },
+    GerballUpcoming: { init(config) { options = config; calls.init++; return { retainedFilter: 'Arsenal', activate() { calls.activate++; } }; } },
+    GerballFixtureAnalysis: { open(config) { calls.analysis.push(config); } },
+    GerballCapturedPrices: { open(config) { calls.prices.push(config); } },
   };
   class FixedDate extends Date {
     constructor(...args) { super(...(args.length ? args : [today])); }
@@ -59,6 +61,7 @@ test('lazy initialization covers nav activation and a directly opened Upcoming v
   assert.equal(lazy.calls.init, 0);
   lazy.navigate('tables'); assert.equal(lazy.calls.init, 0);
   lazy.navigate('upcoming'); lazy.navigate('upcoming'); assert.equal(lazy.calls.init, 1);
+  assert.equal(lazy.calls.activate, 1, 'Returning to the initialized workspace must check freshness');
   assert.equal(lazy.config().endpoint, 'https://database.test/functions/v1/gerball-upcoming-fixtures');
   const direct = harness({ visible: true });
   assert.equal(direct.calls.init, 1);
@@ -73,6 +76,21 @@ test('team link selects its league/season, caps history at today, and preserves 
   assert.equal(app.calls.close, 1);
   assert.equal(app.calls.navigation.at(-1), 'upcoming');
   assert.equal(app.calls.init, 1, 'Return must reuse the existing fixture workspace and its filters');
+  assert.equal(app.calls.activate, 1);
+});
+
+test('match analysis receives an exact-fixture captured-price action and focus context', () => {
+  const app = harness({ visible: true }), fixture = { event_id: 'fixture-exact', league_code: 'E0' }, trigger = {};
+  app.config().onMatchAnalysis({ fixture, returnFocus: trigger });
+  const analysis = app.calls.analysis[0];
+  assert.equal(analysis.fixture, fixture);
+  assert.equal(analysis.returnFocus, trigger);
+  assert.equal(analysis.endpoint, 'https://database.test/functions/v1/gerball-fixture-analysis');
+  const pricesTrigger = {};
+  analysis.onCapturedPrices({ fixture, returnFocus: pricesTrigger });
+  assert.equal(app.calls.prices[0].fixture, fixture);
+  assert.equal(app.calls.prices[0].returnFocus, pricesTrigger);
+  assert.equal(app.calls.prices[0].endpoint, 'https://database.test/functions/v1/gerball-upcoming-fixtures');
 });
 
 test('same-day fixtures exclude that day from historical inputs', async () => {

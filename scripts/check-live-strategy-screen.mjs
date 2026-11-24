@@ -33,3 +33,42 @@ for (const fixture of payload.fixtures) {
   }
 }
 console.log('Live historical screen: authorized request, fixed rules, benchmark returns and fixture cutoffs passed.');
+
+// Follow a real screened fixture to its stored prices. All qualification checks
+// above remain historical-only; prices are a separate, exact-event read.
+const screenedFixture = payload.fixtures.find(fixture => Date.parse(fixture.kickoff_at) > Date.now() + 5 * 60000);
+if (screenedFixture) {
+  const priceURL = new URL(url + '/functions/v1/gerball-upcoming-fixtures');
+  priceURL.searchParams.set('event_id', screenedFixture.event_id);
+  priceURL.searchParams.set('league', screenedFixture.league_code);
+  priceURL.searchParams.set('days', '31');
+  const priceResponse = await fetch(priceURL, { signal: AbortSignal.timeout(25000) });
+  assert.equal(priceResponse.status, 200, 'Exact-event stored prices must respond successfully');
+  const prices = await priceResponse.json();
+  assert.equal(prices.fixtures.length, 1, 'The requested event must resolve without another fixture');
+  const event = prices.fixtures[0];
+  assert.equal(event.event_id, screenedFixture.event_id);
+  assert.equal(event.league_code, screenedFixture.league_code);
+  assert.equal(event.bookmakers_loaded, true);
+  assert.equal(event.bookmaker_count, event.bookmakers.length);
+  assert(['completed', 'partial'].includes(prices.collection_status));
+  let capturedMarkets = 0;
+  for (const market of ['H', 'D', 'A', 'O25', 'U25']) {
+    const quotes = event.bookmakers.map(bookmaker => ({ bookmaker, quote: bookmaker.markets[market] })).filter(item => item.quote !== null);
+    const best = event.markets[market];
+    if (!quotes.length) { assert.equal(best, null, market + ' missing market must stay missing'); continue; }
+    capturedMarkets++;
+    for (const { quote } of quotes) {
+      assert(typeof quote.price === 'number' && Number.isFinite(quote.price) && quote.price > 1 && quote.price <= 10000);
+      assert(Number.isFinite(Date.parse(quote.collected_at)), 'Each quote retains its own capture time');
+    }
+    assert.equal(best.price, Math.max(...quotes.map(item => item.quote.price)), market + ' highest captured price');
+    const selected = quotes.find(item => item.bookmaker.key === best.bookmaker_key);
+    assert(selected, market + ' displayed bookmaker must exist in the same comparison');
+    assert.equal(selected.quote.price, best.price);
+    assert.equal(selected.quote.source_updated_at, best.source_updated_at);
+    assert.equal(selected.quote.collected_at, best.collected_at);
+  }
+  assert(capturedMarkets > 0, 'A stored fixture must retain at least one captured market');
+  console.log(`Live price handoff: exact event and league, ${capturedMarkets} captured markets, ${event.bookmakers.length} bookmakers, highest prices and quote timestamps reconciled.`);
+} else console.log('Live price handoff: no screened fixture beyond the kickoff buffer; empty and started states are covered by the UI suite.');

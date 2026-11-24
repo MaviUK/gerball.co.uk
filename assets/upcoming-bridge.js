@@ -65,9 +65,14 @@
           fixture,
           returnFocus,
           endpoint: CLOUD_URL + '/functions/v1/gerball-fixture-analysis',
+          onCapturedPrices: ({ fixture, returnFocus }) => window.GerballCapturedPrices.open({
+            fixture,
+            returnFocus,
+            endpoint: CLOUD_URL + '/functions/v1/gerball-upcoming-fixtures',
+          }),
         }),
       });
-    }
+    } else if (workspace) workspace.activate();
   }
 
   window.addEventListener('gerball:viewchange', event => {

@@ -7,15 +7,16 @@ const source = fs.readFileSync(new URL('../assets/strategy-screen-bridge.js', im
 
 function load(hidden = true) {
   const view = { hidden }, container = {}, handlers = {}, calls = [];
-  let activates = 0, analysis;
+  let activates = 0, analysis, prices;
   const window = {
     addEventListener(name, handler) { handlers[name] = handler; },
     GerballStrategyScreen: { init(options) { calls.push(options); return { activate() { activates++; } }; } },
     GerballFixtureAnalysis: { open(options) { analysis = options; } },
+    GerballCapturedPrices: { open(options) { prices = options; } },
   };
   const document = { getElementById(id) { return id === 'view-screening' ? view : id === 'strategyScreen' ? container : null; } };
   vm.runInNewContext(source, { window, document, CLOUD_URL: 'https://project.test', CLOUD_KEY: 'sb_publishable_existing', tableNames: { E0: 'Premier League' } });
-  return { view, container, calls, handlers, activateCount: () => activates, analysis: () => analysis };
+  return { view, container, calls, handlers, activateCount: () => activates, analysis: () => analysis, prices: () => prices };
 }
 
 test('screening initializes only on its own view and refreshes through activate on return', () => {
@@ -43,4 +44,21 @@ test('a directly opened screen initializes and reuses the historical analysis di
   assert.equal(app.analysis().fixture, fixture);
   assert.equal(app.analysis().returnFocus, returnFocus);
   assert.equal(app.analysis().endpoint, 'https://project.test/functions/v1/gerball-fixture-analysis');
+});
+
+test('screen and analysis price actions preserve the exact fixture, selected market and return focus', () => {
+  const app = load(false), fixture = { event_id: 'event-31-days', league_code: 'SP1' };
+  const cardTrigger = {}, analysisTrigger = {};
+  app.calls[0].onCapturedPrices({ fixture, returnFocus: cardTrigger, market: 'D' });
+  assert.equal(app.prices().fixture, fixture);
+  assert.equal(app.prices().returnFocus, cardTrigger);
+  assert.equal(app.prices().market, 'D');
+  assert.equal(app.prices().endpoint, 'https://project.test/functions/v1/gerball-upcoming-fixtures');
+  assert.equal(Object.hasOwn(app.prices(), 'apiKey'), false);
+  app.calls[0].onMatchAnalysis({ fixture, returnFocus: cardTrigger, market: 'A' });
+  app.analysis().onCapturedPrices({ fixture, returnFocus: analysisTrigger });
+  assert.equal(app.prices().fixture, fixture);
+  assert.equal(app.prices().returnFocus, analysisTrigger);
+  assert.equal(app.prices().market, 'A');
+  assert.equal(app.analysis().returnFocus, cardTrigger, 'Nested price action must retain the analysis return destination');
 });

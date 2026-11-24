@@ -28,6 +28,8 @@ Statuses distinguish `match`, `no_match`, `insufficient_history` and `unmatched_
 
 Current prices do not affect qualification. The new endpoint returns no current odds, recommendations, expected values or calibrated probabilities. The detailed Match analysis button opens the existing historical comparison, whose season/venue controls are a separate descriptive view.
 
+Each fixture also has a **Captured prices** action. It opens the exact event's latest stored bookmaker comparison in a separate dialog, preserving the screen's market and filters. The same action is available inside Match analysis. These prices are informational and do not rerun or alter historical qualification. See [Captured prices](captured-prices.md) for timestamps and refresh behavior.
+
 ## Historical evidence
 
 The fixed research interval is **1 August 2023 through 30 June 2026**, matching the existing lab defaults. For each H/D/A rule, the screen reports the full period and its final 30% by distinct match dates. The split date is selected before rule and price filtering, exactly as in the existing historical benchmark code. This final slice is retrospective research; it has already been available during development.

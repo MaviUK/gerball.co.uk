@@ -17,6 +17,10 @@ dialog.fixture-analysis[open] { display: flex; flex-direction: column; }
 .fixture-analysis button:disabled { opacity: .65; cursor: wait; }
 .fixture-analysis .fa-close { flex: 0 0 auto; }
 .fa-toolbar { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(160px, 1fr) auto; gap: 14px; align-items: end; flex: 0 0 auto; padding: 16px 28px; border-bottom: 1px solid #30445d; background: #111f32; }
+.fa-toolbar.fa-has-prices { grid-template-columns: minmax(130px, 1fr) minmax(150px, 1fr) auto auto; }
+.fixture-analysis .fa-prices { color: #aee8cd; border-color: #41665f; background: #17382f; }
+.fixture-analysis .fa-prices:hover { background: #204b3e; }
+.fa-price-status { color: #ecd2a2; font-size: .875rem; }
 .fa-control { min-width: 0; }
 .fixture-analysis label { margin-bottom: 6px; color: #c0d2e6; font-size: .875rem; }
 .fixture-analysis select { width: 100%; min-height: 44px; padding: 10px 38px 10px 12px; font: 400 .875rem/1.3 system-ui, sans-serif; color: #eaf2ff; background: #0b1729; border: 1px solid #405871; border-radius: 8px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23bcd2e6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
@@ -89,7 +93,9 @@ dialog.fixture-analysis[open] { display: flex; flex-direction: column; }
   dialog.fixture-analysis { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); border-radius: 12px; }
   .fa-header { padding: 18px; gap: 12px; }
   .fa-toolbar { padding: 14px 18px; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fa-toolbar.fa-has-prices { grid-template-columns: 1fr 1fr; }
   .fixture-analysis .fa-refresh { grid-column: 1 / -1; min-height: 40px; padding: 8px 12px; }
+  .fixture-analysis .fa-has-prices .fa-refresh { grid-column: auto; min-height: 44px; }
   .fa-body { padding: 18px; scrollbar-gutter: auto; }
   .fa-league-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fa-meeting { grid-template-columns: 1fr auto; gap: 7px 12px; }

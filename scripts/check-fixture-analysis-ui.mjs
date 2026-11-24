@@ -162,6 +162,61 @@ test('changing recent window requests its own sample, while venue and season swi
   assert.deepEqual(windows, [10, 5]);
 });
 
+test('opening captured prices preserves the historical dialog, chosen sample, venue and return destination', async () => {
+  const requests = [], destinations = [];
+  const { api, document } = app(async url => {
+    const size = Number(new URL(url).searchParams.get('window')); requests.push(size);
+    return Response.json(payload('event-1', size));
+  });
+  const original = fixture(), trigger = document.createElement('button'); document.body.appendChild(trigger);
+  await api.open({ fixture: original, endpoint: 'https://example.test/analysis', returnFocus: trigger, onCapturedPrices: value => destinations.push(value) });
+  const sample = document.getElementById('fixtureAnalysisSample'); sample.value = '5'; sample.dispatch('change'); await settle();
+  const venue = document.getElementById('fixtureAnalysisVenue'); venue.value = 'overall'; venue.dispatch('change');
+  const button = document.all().find(element => element.className === 'fa-prices');
+  assert.equal(button.hidden, false);
+  button.dispatch('click'); await settle();
+  assert.equal(destinations.length, 1);
+  assert.equal(destinations[0].fixture.event_id, original.event_id);
+  assert.equal(destinations[0].returnFocus, button);
+  assert.equal(document.getElementById('fixtureAnalysis').open, true);
+  assert.equal(document.documentElement.classList.contains('fixture-analysis-open'), true);
+  assert.equal(sample.value, '5'); assert.equal(venue.value, 'overall');
+  assert.deepEqual(requests, [10, 5], 'Price handoff must not change the historical sample');
+  api.close(); assert.equal(document.activeElement, trigger);
+  await api.open({ fixture: fixture('other'), endpoint: 'https://example.test/analysis' });
+  assert.equal(button.hidden, true, 'A later caller without a price action must not reuse an earlier callback');
+});
+
+test('price handoff failure preserves the loaded history and permits retry', async () => {
+  let fail = true, calls = 0;
+  const { api, document } = app(async () => Response.json(payload()));
+  await api.open({ fixture: fixture(), endpoint: 'https://example.test/analysis', onCapturedPrices() { calls++; if (fail) throw Error('private diagnostic'); } });
+  const button = document.all().find(element => element.className === 'fa-prices');
+  button.dispatch('click'); await settle();
+  const status = document.all().find(element => element.className === 'fa-price-status');
+  assert.equal(status.hidden, false);
+  assert.match(status.textContent, /Captured prices could not be opened/);
+  assert.doesNotMatch(document.body.textContent, /private diagnostic/);
+  assert.match(document.body.textContent, /Team comparison/);
+  fail = false; button.dispatch('click'); await settle();
+  assert.equal(calls, 2); assert.equal(status.hidden, true);
+});
+
+test('accepted fixture updates keep the analysis heading and captured-price destination aligned', async () => {
+  const updated = payload();
+  updated.fixture.kickoff_at = '2026-12-04T20:00:00Z';
+  updated.fixture.home.provider_name = 'Updated home name';
+  const destinations = [], { api, document } = app(async () => Response.json(updated));
+  await api.open({ fixture: fixture(), endpoint: 'https://example.test/analysis', onCapturedPrices: value => destinations.push(value) });
+  assert.match(document.getElementById('fixtureAnalysisTitle').textContent, /Updated home name/);
+  assert.match(document.all().find(element => element.className === 'fa-prices').getAttribute('aria-label'), /Updated home name/);
+  assert.match(document.all().find(element => element.className === 'fa-fixture-meta').textContent, /4 Dec, 20:00 UK/);
+  document.all().find(element => element.className === 'fa-prices').dispatch('click'); await settle();
+  assert.equal(destinations[0].fixture.event_id, 'event-1');
+  assert.equal(destinations[0].fixture.kickoff_at, updated.fixture.kickoff_at);
+  assert.equal(destinations[0].fixture.home.provider_name, 'Updated home name');
+});
+
 test('a stale response cannot replace a newly opened fixture', async () => {
   const pending = new Map();
   const { api, document } = app(url => new Promise(resolve => pending.set(new URL(url).searchParams.get('event_id'), resolve)));

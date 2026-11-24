@@ -4,7 +4,7 @@ import vm from 'node:vm';
 
 const context = vm.createContext({ Intl, Date, URL, AbortController });
 vm.runInContext(readFileSync(new URL('../assets/upcoming.js', import.meta.url), 'utf8'), context);
-const { londonDate, ageLabel, quotePrice, filterFixtures, searchText, seasonLabel } = context.GerballUpcoming.helpers;
+const { londonDate, ageLabel, quotePrice, filterFixtures, searchText, seasonLabel, freshPayload, snapshotRevision } = context.GerballUpcoming.helpers;
 let checks = 0;
 function check(label, verify) { verify(); checks++; console.log(`PASS ${label}`); }
 
@@ -70,6 +70,35 @@ check('Historical season codes remain readable in form labels', () => {
   assert.equal(seasonLabel('2627'), '2026/27');
   assert.equal(seasonLabel('9394'), '1993/94');
   assert.equal(seasonLabel('2026/27'), '2026/27');
+});
+
+check('Workspace freshness uses both fetched and generated time with an exact five-minute boundary', () => {
+  const now = Date.parse('2026-11-24T13:00:00Z'), data = { generated_at: new Date(now).toISOString() };
+  assert.equal(freshPayload(data, now, now + 299999), true);
+  assert.equal(freshPayload(data, now, now + 300000), false);
+  assert.equal(freshPayload({ generated_at: new Date(now - 300000).toISOString() }, now, now), false);
+  assert.equal(freshPayload(data, now + 1, now), false);
+  assert.equal(freshPayload({ generated_at: new Date(now + 60001).toISOString() }, now, now), false);
+  assert.equal(freshPayload({}, now, now), false);
+});
+
+check('Returning across UK noon or midnight expires a recently fetched workspace in GMT and BST', () => {
+  for (const [before, after] of [
+    ['2026-11-24T11:59:00Z', '2026-11-24T12:00:00Z'],
+    ['2027-07-01T10:59:00Z', '2027-07-01T11:00:00Z'],
+    ['2026-11-24T23:59:00Z', '2026-11-25T00:00:00Z'],
+    ['2027-07-01T22:59:00Z', '2027-07-01T23:00:00Z'],
+  ]) {
+    assert.equal(freshPayload({ generated_at: before }, Date.parse(before), Date.parse(after)), false, `${before} to ${after}`);
+    assert.equal(freshPayload({ generated_at: after }, Date.parse(after), Date.parse(after) + 1000), true);
+  }
+});
+
+check('Collection revisions retain same-day capture changes, including timestamp precision', () => {
+  const data = { collection_date: '2026-11-24', collected_at: '2026-11-24T12:00:00.000001+00:00' };
+  assert.equal(snapshotRevision(data), snapshotRevision({ ...data, generated_at: 'later' }));
+  assert.notEqual(snapshotRevision(data), snapshotRevision({ ...data, collected_at: '2026-11-24T12:00:00.000002+00:00' }));
+  assert.notEqual(snapshotRevision(data), snapshotRevision({ ...data, collection_date: '2026-11-25' }));
 });
 
 console.log(`Upcoming fixtures UI: ${checks} checks passed.`);

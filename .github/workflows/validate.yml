@@ -18,12 +18,14 @@ jobs:
       - name: Verify daily odds collection, authentication and UK clock changes
         run: node --test scripts/check-odds-collector.mjs
       - name: Verify upcoming fixtures, public endpoint and team aliases
-        run: node --test scripts/check-upcoming-endpoint.mjs scripts/check-upcoming-ui.mjs scripts/check-upcoming-bridge.mjs scripts/check-team-aliases.mjs
+        run: node --test scripts/check-upcoming-endpoint.mjs scripts/check-upcoming-ui.mjs scripts/check-upcoming-bridge.mjs scripts/check-upcoming-lifecycle.mjs scripts/check-team-aliases.mjs
+      - name: Verify captured prices, fixture identity and dialog lifecycle
+        run: node --test scripts/check-captured-prices-ui.mjs
       - name: Verify historical fixture analysis and sample handling
         run: node --test scripts/check-fixture-analysis-endpoint.mjs scripts/check-fixture-analysis-ui.mjs
       - name: Verify historical strategy screening and price-independent qualification
         run: node --test scripts/check-strategy-screen-endpoint.mjs scripts/check-strategy-screen-ui.mjs scripts/check-strategy-screen-bridge.mjs
-      - name: Reconcile the deployed historical strategy screen
+      - name: Reconcile the deployed historical screen and captured prices
         run: node scripts/check-live-strategy-screen.mjs
       - name: Verify recorded research screens and immutable observation display
         run: node --test scripts/check-recorded-screens-endpoint.mjs scripts/check-recorded-screens-ui.mjs scripts/check-recorded-screens-bridge.mjs

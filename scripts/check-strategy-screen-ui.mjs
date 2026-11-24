@@ -131,14 +131,14 @@ function dom() {
   document.getElementById = id => document.all().find(element => element.id === id) || null;
   return document;
 }
-function app(fetchImpl) {
-  const document = dom(), clock = { now: instant }, analyses = [];
+function app(fetchImpl, overrides = {}) {
+  const document = dom(), clock = { now: instant }, analyses = [], prices = [];
   class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [clock.now])); } static now() { return clock.now; } }
   const context = vm.createContext({ document, Intl, Date: ClockDate, URL, Blob, AbortController, fetch: fetchImpl, location: { href: 'https://gerball.co.uk/#screening' }, setInterval: () => 1, clearInterval() {}, setTimeout: () => 1, clearTimeout() {} });
   vm.runInContext(source, context);
   const container = document.createElement('div'); document.body.appendChild(container);
-  const api = context.GerballStrategyScreen.init({ container, endpoint: 'https://example.test/screen', apiKey: 'public-browser-key', leagues: [['E0', 'Premier League'], ['E1', 'Championship']], initialLeague: 'E0', onMatchAnalysis: value => analyses.push(value) });
-  return { api, document, container, clock, analyses };
+  const api = context.GerballStrategyScreen.init({ container, endpoint: 'https://example.test/screen', apiKey: 'public-browser-key', leagues: [['E0', 'Premier League'], ['E1', 'Championship']], initialLeague: 'E0', onMatchAnalysis: value => analyses.push(value), onCapturedPrices: value => prices.push(value), ...overrides });
+  return { api, document, container, clock, analyses, prices };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const cards = document => document.all().filter(element => element.className === 'card ss-fixture');
@@ -176,6 +176,33 @@ test('market and exclusion controls update evidence/cards locally without anothe
   assert.match(value.container.textContent, /Insufficient history/);
   assert.match(value.container.textContent, /Team not linked/);
   assert.equal(calls, 1);
+});
+
+test('price handoff uses the displayed fixture and market without changing historical qualification', async () => {
+  let calls = 0; const value = app(async () => { calls++; return Response.json(payload()); });
+  await value.api.activate();
+  const market = value.document.getElementById('screenMarket'); market.value = 'D'; market.dispatch('change');
+  const before = cards(value.document).map(card => card.textContent);
+  const prices = value.document.all().find(element => element.className === 'ss-prices-button');
+  prices.click(); await settle();
+  assert.equal(value.prices.length, 1);
+  assert.equal(value.prices[0].fixture.event_id, 'draw');
+  assert.equal(value.prices[0].market, 'D');
+  assert.equal(value.prices[0].returnFocus, prices);
+  assert.deepEqual(cards(value.document).map(card => card.textContent), before);
+  assert.equal(market.value, 'D');
+  assert.equal(calls, 1, 'Opening prices must not rerun or alter the historical rule');
+});
+
+test('a price handoff error stays local to its card and leaves the screen usable', async () => {
+  const value = app(async () => Response.json(payload()), { onCapturedPrices() { throw Error('private diagnostic'); } });
+  await value.api.activate();
+  value.document.all().find(element => element.className === 'ss-prices-button').click(); await settle();
+  assert.match(cards(value.document)[0].textContent, /Captured prices could not be opened/);
+  assert.doesNotMatch(value.container.textContent, /private diagnostic/);
+  value.document.all().find(element => element.className === 'ss-analysis-button').click(); await settle();
+  assert.equal(value.analyses[0].fixture.event_id, 'home');
+  assert.equal(value.analyses[0].market, 'H');
 });
 
 test('failed league switch clears the former league instead of relabelling its data', async () => {

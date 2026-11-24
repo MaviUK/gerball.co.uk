@@ -8,7 +8,7 @@
   const kickoffDisplay = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Europe/London' });
   const dayParts = new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/London' });
   let ui = null;
-  const state = { fixture: null, endpoint: '', data: null, sample: 'season', venue: 'venue', window: 10, request: 0, controller: null, returnFocus: null };
+  const state = { fixture: null, endpoint: '', data: null, sample: 'season', venue: 'venue', window: 10, request: 0, controller: null, returnFocus: null, onCapturedPrices: null };
 
   function numeric(value) {
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -113,16 +113,29 @@
     const sampleControl = selectField('fixtureAnalysisSample', 'Comparison sample', [['season', 'Current season'], ['5', 'Last 5'], ['10', 'Last 10'], ['20', 'Last 20']], state.sample);
     const venueControl = selectField('fixtureAnalysisVenue', 'Venues', [['venue', 'Home vs away'], ['overall', 'All venues']], state.venue);
     const refresh = button('Refresh analysis', 'fa-refresh', () => load(state.sample === 'season' ? state.window : Number(state.sample), true));
-    toolbar.append(sampleControl.field, venueControl.field, refresh);
+    const prices = button('Captured prices', 'fa-prices', async () => {
+      const fixture = state.fixture, openPrices = state.onCapturedPrices;
+      if (!fixture || typeof openPrices !== 'function') return;
+      priceStatus.hidden = true;
+      try { await openPrices({ fixture, returnFocus: prices }); }
+      catch {
+        if (state.fixture === fixture && dialog.open) {
+          priceStatus.textContent = 'Captured prices could not be opened. Please try again.'; priceStatus.hidden = false;
+        }
+      }
+    });
+    prices.hidden = true;
+    toolbar.append(sampleControl.field, venueControl.field, refresh, prices);
     const body = make('div', 'fa-body');
     const description = make('p', 'fa-description', 'Observed results from your stored history. Rates describe this sample.');
     description.id = 'fixtureAnalysisDescription';
     const status = make('p', 'fa-status'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+    const priceStatus = make('p', 'fa-price-status'); priceStatus.hidden = true; priceStatus.setAttribute('role', 'status');
     const content = make('div', 'fa-content');
-    body.append(description, status, content);
+    body.append(description, status, priceStatus, content);
     dialog.append(header, toolbar, body);
     root.document.body.appendChild(dialog);
-    ui = { dialog, title, meta, closeButton, sample: sampleControl.select, venue: venueControl.select, refresh, body, status, content };
+    ui = { dialog, title, meta, closeButton, sample: sampleControl.select, venue: venueControl.select, refresh, prices, toolbar, priceStatus, body, status, content };
 
     sampleControl.select.addEventListener('change', () => {
       state.sample = sampleControl.select.value;
@@ -328,9 +341,18 @@
   function render() {
     if (!ui || !state.data || !ui.dialog.open) return;
     const data = state.data;
+    state.fixture = data.fixture;
+    setFixtureHeader(data.fixture);
     ui.refresh.disabled = false; ui.refresh.textContent = 'Refresh analysis'; ui.content.removeAttribute('aria-busy');
     ui.status.textContent = `Results through ${formattedDate(data.as_of_date)} · ${seasonLabel(data.fixture.season)} · UK calendar dates. Results on this fixture’s date are excluded.`;
     ui.content.replaceChildren(comparison(data), leagueContext(data), headToHead(data), recentMatches(data));
+  }
+
+  function setFixtureHeader(fixture) {
+    ui.title.textContent = `${teamName(fixture, 'home')} v ${teamName(fixture, 'away')}`;
+    ui.prices.setAttribute('aria-label', `Captured prices for ${teamName(fixture, 'home')} and ${teamName(fixture, 'away')}`);
+    const kickoff = new Date(fixture.kickoff_at);
+    ui.meta.textContent = `${fixture.league_name || fixture.league_code || 'League'}${Number.isFinite(kickoff.getTime()) ? ' · ' + kickoffDisplay.format(kickoff) + ' UK' : ''}`;
   }
 
   async function load(windowSize, force = false) {
@@ -387,10 +409,11 @@
     state.fixture = options.fixture; state.endpoint = options.endpoint; state.data = null;
     state.sample = 'season'; state.venue = 'venue'; state.window = 10;
     state.returnFocus = options.returnFocus || root.document.activeElement;
+    state.onCapturedPrices = typeof options.onCapturedPrices === 'function' ? options.onCapturedPrices : null;
+    dialogUI.prices.hidden = !state.onCapturedPrices; dialogUI.priceStatus.hidden = true;
+    dialogUI.toolbar.classList[state.onCapturedPrices ? 'add' : 'remove']('fa-has-prices');
     dialogUI.sample.value = state.sample; dialogUI.venue.value = state.venue;
-    dialogUI.title.textContent = `${teamName(options.fixture, 'home')} v ${teamName(options.fixture, 'away')}`;
-    const kickoff = new Date(options.fixture.kickoff_at);
-    dialogUI.meta.textContent = `${options.fixture.league_name || options.fixture.league_code || 'League'}${Number.isFinite(kickoff.getTime()) ? ' · ' + kickoffDisplay.format(kickoff) + ' UK' : ''}`;
+    setFixtureHeader(options.fixture);
     if (!dialogUI.dialog.open) dialogUI.dialog.showModal();
     root.document.documentElement.classList.add('fixture-analysis-open');
     dialogUI.body.scrollTop = 0;

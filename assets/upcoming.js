@@ -4,11 +4,14 @@
   const MARKET_LABELS = Object.freeze({ H: 'Home', D: 'Draw', A: 'Away', O25: 'Over 2.5', U25: 'Under 2.5' });
   const MARKET_GROUPS = Object.freeze({ all: ['H', 'D', 'A', 'O25', 'U25'], h2h: ['H', 'D', 'A'], totals: ['O25', 'U25'] });
   const PAGE_SIZE = 24;
+  const MAX_AGE = 5 * 60 * 1000;
+  const MAX_DETAIL_CACHE = 48;
   const instances = new WeakMap();
   const dateParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' });
   const displayDate = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short' });
   const displayTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const displayTimestamp = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const clockHour = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', hourCycle: 'h23' });
 
   function timestamp(value) {
     const parsed = typeof value === 'string' ? Date.parse(value) : NaN;
@@ -41,6 +44,20 @@
 
   function quotePrice(quote) {
     return quote && typeof quote.price === 'number' && Number.isFinite(quote.price) && quote.price > 1 && quote.price <= 10000 ? quote.price : null;
+  }
+
+  function snapshotRevision(data) {
+    return JSON.stringify([data?.collection_date ?? null, data?.collected_at ?? null]);
+  }
+
+  function freshPayload(data, fetchedAt, now = Date.now()) {
+    if (!data || !Number.isFinite(fetchedAt) || fetchedAt > now || now - fetchedAt >= MAX_AGE) return false;
+    const generated = timestamp(data.generated_at);
+    if (generated === null || generated > now + 60000 || now - generated >= MAX_AGE) return false;
+    const today = londonDate(now);
+    if (londonDate(fetchedAt) !== today || londonDate(generated) !== today) return false;
+    const hour = Number(clockHour.format(new Date(now)));
+    return !(hour >= 12 && (Number(clockHour.format(new Date(fetchedAt))) < 12 || Number(clockHour.format(new Date(generated))) < 12));
   }
 
   function seasonLabel(value) {
@@ -79,7 +96,7 @@
     if (instances.has(container)) return instances.get(container);
     if (!options || typeof options.endpoint !== 'string' || !options.endpoint) throw new Error('Upcoming fixtures endpoint is required');
 
-    const state = { data: null, shown: PAGE_SIZE, loading: false, request: 0, controller: null, signature: '', open: new Set(), details: new Map(), detailRequests: new Map(), destroyed: false };
+    const state = { data: null, fetchedAt: null, shown: PAGE_SIZE, loading: false, promise: null, request: 0, controller: null, signature: '', open: new Set(), details: new Map(), detailRequests: new Map(), detailGeneration: 0, destroyed: false };
     const element = (tag, className, value) => {
       const node = document.createElement(tag);
       if (className) node.className = className;
@@ -320,11 +337,17 @@
         detailHost.setAttribute('aria-busy', 'true');
         try {
           const fullFixture = await loadBookmakers(fixture);
-          if (!state.destroyed) { detailHost.replaceChildren(comparisonTable(fullFixture, keys)); built = true; }
+          if (!state.destroyed && detailHost.isConnected) { detailHost.replaceChildren(comparisonTable(fullFixture, keys)); built = true; }
         } catch (error) {
-          if (!state.destroyed) {
-            detailHost.replaceChildren(element('p', 'upcoming-detail-status', error.message === 'snapshot_changed' ? 'A newer daily snapshot is available. Refresh fixtures to compare its prices.' : 'Bookmaker prices could not be loaded. Please try again.'));
-            detailHost.appendChild(button(error.message === 'snapshot_changed' ? 'Refresh fixtures' : 'Try again', 'secondary upcoming-retry', error.message === 'snapshot_changed' ? () => reload() : () => buildComparison()));
+          if (!state.destroyed && detailHost.isConnected) {
+            const needsRefresh = ['snapshot_changed', 'fixture_started'].includes(error.message);
+            const message = error.message === 'snapshot_changed' ? 'The collection snapshot has changed. Refresh fixtures to compare prices from the same capture.'
+              : error.message === 'fixture_started' ? 'This fixture has started or is no longer upcoming. Refresh the fixture list.'
+              : error.message === 'list_refreshing' ? 'The fixture list is refreshing. Its bookmaker comparison will use the refreshed snapshot.'
+              : error.message === 'comparison_cancelled' ? 'This comparison was cancelled during a fixture-list refresh. Please try again.'
+              : 'Bookmaker prices could not be loaded. Please try again.';
+            detailHost.replaceChildren(element('p', 'upcoming-detail-status', message));
+            detailHost.appendChild(button(needsRefresh ? 'Refresh fixtures' : 'Try again', 'secondary upcoming-retry', needsRefresh ? () => reload() : () => buildComparison()));
           }
         } finally { loading = false; detailHost.removeAttribute('aria-busy'); }
       };
@@ -340,29 +363,41 @@
     }
 
     async function loadBookmakers(fixture) {
+      if (state.loading) throw new Error('list_refreshing');
+      if (!state.data?.fixtures.includes(fixture)) throw new Error('comparison_cancelled');
+      if (timestamp(fixture.kickoff_at) <= Date.now()) throw new Error('fixture_started');
       if (fixture.bookmakers_loaded === true && Array.isArray(fixture.bookmakers)) return fixture;
-      const collectionDate = state.data.collection_date;
-      const cacheKey = JSON.stringify([collectionDate, state.data.collected_at, fixture.event_id]);
+      const revision = snapshotRevision(state.data), generation = state.detailGeneration;
+      const cacheKey = JSON.stringify([revision, fixture.event_id]);
       if (state.details.has(cacheKey)) return state.details.get(cacheKey);
       if (state.detailRequests.has(cacheKey)) return state.detailRequests.get(cacheKey).promise;
       const controller = new AbortController();
       const timeout = root.setTimeout(() => controller.abort(), 20000);
       const url = new URL(options.endpoint, root.location && root.location.href);
       url.searchParams.set('event_id', fixture.event_id);
-      const promise = (async () => {
+      if (fixture.league_code) url.searchParams.set('league', fixture.league_code);
+      url.searchParams.set('days', '31');
+      const pending = { controller, promise: null };
+      state.detailRequests.set(cacheKey, pending);
+      const current = () => !state.destroyed && generation === state.detailGeneration && revision === snapshotRevision(state.data) && !controller.signal.aborted;
+      pending.promise = Promise.resolve().then(async () => {
         try {
+          if (!current()) throw new Error('comparison_cancelled');
           const response = await root.fetch(url.href, { method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store', signal: controller.signal });
           if (!response.ok) throw new Error('comparison_unavailable');
           const data = await response.json();
-          if (data.collection_date !== collectionDate) throw new Error('snapshot_changed');
+          if (!current()) throw new Error('comparison_cancelled');
+          if (snapshotRevision(data) !== revision) throw new Error('snapshot_changed');
+          if (timestamp(fixture.kickoff_at) <= Date.now()) throw new Error('fixture_started');
           const fullFixture = Array.isArray(data.fixtures) && data.fixtures.find(item => item.event_id === fixture.event_id);
-          if (!fullFixture || fullFixture.bookmakers_loaded !== true || !Array.isArray(fullFixture.bookmakers)) throw new Error('invalid_comparison_response');
+          if (!fullFixture || fullFixture.league_code !== fixture.league_code || fullFixture.kickoff_at !== fixture.kickoff_at || fullFixture.bookmakers_loaded !== true || !Array.isArray(fullFixture.bookmakers)) throw new Error('invalid_comparison_response');
+          if (timestamp(fullFixture.kickoff_at) <= Date.now()) throw new Error('fixture_started');
           state.details.set(cacheKey, fullFixture);
+          while (state.details.size > MAX_DETAIL_CACHE) state.details.delete(state.details.keys().next().value);
           return fullFixture;
-        } finally { root.clearTimeout(timeout); state.detailRequests.delete(cacheKey); }
-      })();
-      state.detailRequests.set(cacheKey, { controller, promise });
-      return promise;
+        } finally { root.clearTimeout(timeout); if (state.detailRequests.get(cacheKey) === pending) state.detailRequests.delete(cacheKey); }
+      });
+      return pending.promise;
     }
 
     function renderResults(force) {
@@ -390,22 +425,32 @@
       }
     }
 
-    async function reload() {
-      if (state.destroyed) return;
+    function clearDetails() {
+      state.detailGeneration++;
+      for (const pending of state.detailRequests.values()) pending.controller.abort();
+      state.detailRequests.clear(); state.details.clear();
+    }
+
+    function reload() {
+      if (state.destroyed) return Promise.resolve();
       const request = ++state.request;
       if (state.controller) state.controller.abort();
+      clearDetails();
       const controller = new AbortController(); state.controller = controller;
       const timeout = root.setTimeout(() => controller.abort(), 20000);
       state.loading = true; container.setAttribute('aria-busy', 'true');
       refresh.disabled = true; refresh.textContent = 'Refreshing…'; notice.hidden = true;
       if (!state.data) resultsStatus.textContent = 'Loading upcoming fixtures…';
-      try {
+      else { updateMetadata(); renderResults(false); }
+      state.promise = Promise.resolve().then(async () => { try {
         const response = await root.fetch(options.endpoint, { method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store', signal: controller.signal });
         if (!response.ok) throw new Error('fixture_service_unavailable');
         const data = await response.json();
         if (!data || typeof data !== 'object' || !Array.isArray(data.fixtures)) throw new Error('invalid_fixture_response');
         if (request !== state.request || state.destroyed) return;
-        state.data = data; state.shown = PAGE_SIZE;
+        state.data = data; state.fetchedAt = Date.now(); state.loading = false;
+        const futureIds = new Set(filterFixtures(data.fixtures).map(fixture => fixture.event_id));
+        state.open = new Set([...state.open].filter(id => futureIds.has(id)));
         updateMetadata(); updateFilterOptions(); renderResults(true);
       } catch {
         if (request !== state.request || state.destroyed) return;
@@ -416,22 +461,31 @@
           resultsStatus.textContent = 'Fixtures are temporarily unavailable.';
           captured.textContent = 'Collection details are temporarily unavailable.';
           collectionState.textContent = 'Connection unavailable'; collectionState.className = 'upcoming-state upcoming-state-warning';
-        }
+        } else { updateMetadata(); renderResults(false); }
       } finally {
         root.clearTimeout(timeout);
         if (request === state.request) {
-          state.loading = false; container.removeAttribute('aria-busy'); refresh.disabled = false; refresh.textContent = 'Refresh fixtures';
+          state.loading = false; state.promise = null; container.removeAttribute('aria-busy'); refresh.disabled = false; refresh.textContent = 'Refresh fixtures';
         }
-      }
+      } });
+      return state.promise;
+    }
+
+    function activate() {
+      if (state.destroyed) return Promise.resolve();
+      if (state.data) { updateMetadata(); renderResults(false); }
+      if (state.loading) return state.promise;
+      if (!freshPayload(state.data, state.fetchedAt)) return reload();
+      return Promise.resolve();
     }
 
     const timer = root.setInterval(() => { if (!state.destroyed && state.data && !document.hidden) { updateMetadata(); renderResults(false); } }, 60000);
     const api = {
-      reload,
+      reload, activate,
       destroy() {
         state.destroyed = true; state.request++;
         if (state.controller) state.controller.abort();
-        for (const pending of state.detailRequests.values()) pending.controller.abort();
+        clearDetails();
         root.clearInterval(timer); instances.delete(container);
       },
     };
@@ -439,5 +493,5 @@
     return api;
   }
 
-  root.GerballUpcoming = Object.freeze({ init, helpers: Object.freeze({ londonDate, ageLabel, quotePrice, filterFixtures, searchText, formatStamp, seasonLabel }) });
+  root.GerballUpcoming = Object.freeze({ init, helpers: Object.freeze({ londonDate, ageLabel, quotePrice, filterFixtures, searchText, formatStamp, seasonLabel, freshPayload, snapshotRevision }) });
 })(typeof window !== 'undefined' ? window : globalThis);
