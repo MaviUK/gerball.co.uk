@@ -162,7 +162,7 @@ test('loads only when activated, coalesces activation, and filters cached starte
   await flush();
   assert.equal(ui.cards().length, 1); assert.match(ui.cards()[0].textContent, /Home later/);
   assert.match(ui.find('pb-ledger')[0].textContent, /today/i);
-  assert.equal(ui.scopedCalls.length,1,'Default ledger fetches only today's UK fixtures');
+  assert.equal(ui.scopedCalls.length,1,"Default ledger fetches only today\'s UK fixtures");
   ui.scope().value='history';await ui.scope().dispatch('change');await flush();
   assert.match(ui.find('pb-ledger')[0].textContent, /history/);
 });
