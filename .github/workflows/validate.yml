@@ -47,6 +47,8 @@ jobs:
         run: node --test scripts/check-paper-bets-lifecycle.mjs
       - name: Verify isolated today-first bookmaker price comparisons
         run: node scripts/check-live-paper-refreshed-prices.mjs
+      - name: Verify saved-price movements and modeled follow-up edge
+        run: node scripts/check-live-paper-odds-movement.mjs
       - name: Verify paper recommendations, unit staking and P&L ledger
         run: node scripts/check-live-paper-bets.mjs
       - name: Reconcile live historical league-market benchmarks

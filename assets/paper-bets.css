@@ -71,3 +71,11 @@
 #paperBets .pb-price-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 #paperBets .pb-price-head button{width:auto}
 #paperBets .pb-live-prices .pb-table-wrap table{min-width:720px}
+
+#paperBets .pb-odds-movement{margin-top:20px}
+#paperBets .pb-movement-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}
+#paperBets .pb-movement-tile{border:1px solid #304b66;background:#102239;border-radius:10px;padding:12px}
+#paperBets .pb-movement-tile small{display:block;font-size:12px;min-height:32px;color:#afc3d6}
+#paperBets .pb-movement-tile strong{font-size:23px;font-variant-numeric:tabular-nums;color:#81d9b4}
+#paperBets .pb-odds-movement .pb-table-wrap table{min-width:1000px}
+@media(max-width:650px){#paperBets .pb-movement-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
