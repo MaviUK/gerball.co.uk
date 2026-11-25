@@ -269,7 +269,7 @@ test('an ignored aborted search cannot replace the current query or restart hidd
 });
 
 test('quote-age messaging changes independently of frozen decisions, units and P&L', async () => {
-  const saved = fixture('saved', { units: 3, quote_collected_at: '2026-11-25T11:00:00Z', recorded_at: '2026-11-25T11:15:00Z' });
+  const saved = fixture('saved', { units: 3, quote_collected_at: '2026-11-25T11:00:00Z', quote_updated_at: '2026-11-25T10:59:00Z', recorded_at: '2026-11-25T11:15:00Z' });
   const ui = app((call, state) => Promise.resolve(Response.json(report(state.now(), [saved]))), '2026-11-25T12:59:50Z');
   await flush(); const metrics = ui.find('pb-dashboard')[0].textContent;
   assert.match(ui.cards()[0].textContent, /PAPER 3 units/);
