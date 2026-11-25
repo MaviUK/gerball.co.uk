@@ -133,3 +133,24 @@ assert(Array.isArray(readiness.markets)&&readiness.markets.every(m=>m.qualifying
 const denied=await fetch(readinessUrl,{signal:AbortSignal.timeout(15000)});
 assert.equal(denied.status,401,'Readiness endpoint rejects missing application key');
 console.log('Readiness endpoint verified',readiness.capture_date,readiness.priced_markets,'of',readiness.qualifying_markets,'priced');
+const outcomeUrl=url+'/functions/v1/gerball-forward-outcomes';
+const outcomeResponse=await fetch(outcomeUrl,{headers:{apikey:key},signal:AbortSignal.timeout(15000)});
+assert.equal(outcomeResponse.status,200,'Forward outcomes must be available to the application');
+const outcomeReport=await outcomeResponse.json();
+assert.equal(outcomeReport.version,'forward_outcomes_v1');
+assert.equal(outcomeReport.rule_version,'ppg_last5_dates_050_v1');
+assert.equal(outcomeReport.evaluation_start,'2026-12-01');
+assert.equal(outcomeReport.summary.length,6,'Forward report must separate three markets and two phases');
+assert.equal(outcomeReport.leagues.length,108,'Forward report must include every league, market and phase');
+for (const item of outcomeReport.summary) {
+ assert(['H','D','A'].includes(item.market) && ['calibration','post_boundary'].includes(item.phase));
+ assert.equal(item.qualifying,item.settled+item.pending+item.review);
+ assert.equal(item.settled,item.matched+item.not_matched);
+ assert.equal(item.settled===0,item.match_rate_pct===null,'No settled matches must have no percentage');
+}
+const reportedTotal=outcomeReport.summary.reduce((n,item)=>n+item.qualifying,0);
+assert.equal(reportedTotal,outcomeReport.total_unique_market_observations,'Unique market observations must reconcile');
+assert(!('roi' in outcomeReport) && !('profit' in outcomeReport),'Unpriced research cannot show profit or ROI');
+const outcomeDenied=await fetch(outcomeUrl,{signal:AbortSignal.timeout(15000)});
+assert.equal(outcomeDenied.status,401,'Forward outcomes reject unauthenticated API requests');
+console.log('Forward outcome checks passed for',reportedTotal,'unique market observations');
