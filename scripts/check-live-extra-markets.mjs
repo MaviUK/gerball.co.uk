@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const url=html.match(/const CLOUD_URL='([^']+)'/)?.[1];
+const key=html.match(/const CLOUD_KEY='([^']+)'/)?.[1];
+assert(url&&key,'Site must have public Supabase settings');
+assert(html.includes('assets/extra-market-status.js'),'Extra market status UI must load');
+const js=fs.readFileSync(new URL('../assets/extra-market-status.js',import.meta.url),'utf8');
+assert(js.includes("gerball:viewchange"),'Status panel must load on navigation');
+const publicEndpoint=url+'/functions/v1/gerball-extra-market-status';
+const denied=await fetch(publicEndpoint,{signal:AbortSignal.timeout(15000)});
+assert.equal(denied.status,401,'Market status requires app key');
+const post=await fetch(publicEndpoint,{method:'POST',headers:{apikey:key},signal:AbortSignal.timeout(15000)});
+assert.equal(post.status,405,'Market status must be GET-only');
+const response=await fetch(publicEndpoint,{headers:{apikey:key},signal:AbortSignal.timeout(15000)});
+assert.equal(response.status,200,'Extended market status must be available');
+const data=await response.json();
+assert.equal(data.version,'extra_markets_v1');
+assert(Array.isArray(data.runs)&&data.runs.length>0);
+assert(Array.isArray(data.markets)&&Array.isArray(data.availability)&&Array.isArray(data.latest_quotes));
+const run=data.runs.find(x=>x.mode==='probe'&&x.status==='completed');
+assert(run,'A real completed provider probe is required');
+assert.equal(run.fixture_count,1);
+assert(run.credits_reported<=10&&run.credits_reported>=1);
+assert(run.price_calls<=2&&run.requests_remaining!==null);
+const marketSet=new Set(data.markets.map(x=>x.market_key));
+assert(marketSet.has('halftime_fulltime'));
+assert(marketSet.has('h2h_3_way_h1'));
+assert(marketSet.has('alternate_totals_corners'));
+assert(marketSet.has('btts'));
+const unique=new Set();for(const quote of data.latest_quotes){
+ assert(Number(quote.decimal_odds)>1);
+ assert(Date.parse(quote.collected_at)<Date.parse(quote.kickoff_at),'Price must precede kickoff');
+ assert(Date.parse(quote.source_updated_at)<=Date.parse(quote.collected_at));
+ assert(quote.event_id&&quote.market_key&&quote.bookmaker_name);
+ unique.add(quote.market_key);
+}
+assert(unique.size>=2,'Recent quotes should include multiple distinct markets');
+const collector=url+'/functions/v1/gerball-extra-odds';
+const get=await fetch(collector,{signal:AbortSignal.timeout(15000)});
+assert.equal(get.status,405,'Collector must not allow unauthenticated GET');
+const unauthenticated=await fetch(collector,{method:'POST',headers:{'content-type':'application/json'},
+ body:JSON.stringify({mode:'probe'}),signal:AbortSignal.timeout(15000)});
+assert.equal(unauthenticated.status,401,'Collector requires private cron token');
+console.log('Extended odds verified:',run.prices_saved,'saved prices,',run.credits_reported,'provider credits,',marketSet.size,'priced markets.');
