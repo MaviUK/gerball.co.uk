@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS gerball_extra_private.quotes(
  outcome_description text NOT NULL DEFAULT '',line numeric,line_key text NOT NULL DEFAULT '',
  decimal_odds numeric NOT NULL CHECK(decimal_odds>1 AND decimal_odds<=10000),
  source_updated_at timestamptz NOT NULL,collected_at timestamptz NOT NULL,
- UNIQUE(collection_date,event_id,bookmaker_key,market_key,outcome_name,outcome_description,line_key));
+ UNIQUE(run_id,event_id,bookmaker_key,market_key,outcome_name,outcome_description,line_key));
 CREATE INDEX IF NOT EXISTS gerball_extra_quotes_event_idx ON gerball_extra_private.quotes(event_id,collection_date);
 CREATE INDEX IF NOT EXISTS gerball_extra_quotes_market_idx ON gerball_extra_private.quotes(market_key,collection_date);
 ALTER TABLE gerball_extra_private.runs ENABLE ROW LEVEL SECURITY;
