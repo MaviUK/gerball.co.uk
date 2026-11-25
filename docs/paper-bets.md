@@ -39,3 +39,13 @@ node scripts/check-site.cjs
 node --check assets/paper-bets.js
 node scripts/check-live-paper-bets.mjs
 ```
+
+## Finding fixtures and historical paper bets
+
+The Paper bets & P&L page has one search input shared by upcoming match assessments and the recorded paper ledger. Searches are case-insensitive and include team, league, market, bookmaker, status, fixture date and fixture ID where present.
+
+Upcoming assessments filter the current captured preview locally, keeping the existing All matches / Model candidates / No bet selector. Recorded paper bets use the server-side `public.gerball_paper_search` function, so results are searched across the **entire stored ledger**, rather than just the visible 250-row page. Results are paginated and show the total matches.
+
+The search resets paging when the query changes, debounces user typing, cancels stale queries and safely handles no matches and errors. The Clear button restores the full list; the original lifetime P&L dashboard remains an unfiltered lifetime total, not the result of a search. CSV export downloads the matching records when a search is active and all stored records otherwise. No paper predictions, results, P&L totals or captured odds are modified.
+
+The extended read-only Edge Function accepts `?q=...` in addition to the original unfiltered endpoint. User input is limited to 100 characters. No public SQL permissions or write operations were added.

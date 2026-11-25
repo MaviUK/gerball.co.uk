@@ -60,3 +60,25 @@ for(const item of data.preview.fixtures){
   }
 }
 console.log('Paper recommendations verified:',data.preview.fixtures.length,'fixtures;',data.total_records,'recorded paper bets;',summary.net_units,'net units');
+
+
+// Search is performed on the server over the full saved ledger, not merely the displayed page.
+const searchResponse=await get('?q=chelsea&limit=25&offset=0',{headers:{apikey:key}});
+assert.equal(searchResponse.status,200,'Searching paper bets should be available');
+const searched=await searchResponse.json();
+assert.equal(searched.version,'paper_search_v1');
+assert.equal(searched.query,'chelsea');
+assert(Number.isInteger(searched.total_records)&&Array.isArray(searched.records));
+assert(searched.records.every(b=>[b.home,b.away,b.league,b.bookmaker,b.event_id,b.market,b.status,b.fixture_date]
+ .some(x=>String(x??'').toLowerCase().includes('chelsea'))),'All search results must match');
+const empty=await get('?q=__no_such_team_987654321__&limit=25&offset=0',{headers:{apikey:key}});
+assert.equal(empty.status,200);
+const noMatches=await empty.json();
+assert.equal(noMatches.total_records,0);
+assert.deepEqual(noMatches.records,[]);
+const excessive=await get('?q='+encodeURIComponent('x'.repeat(101)),{headers:{apikey:key}});
+assert.equal(excessive.status,400,'Search input length must be limited');
+assert(js.includes('searchInput.type=\'search\''),'Search input must exist');
+assert(js.includes('searchLedger(page+1)'),'Filtered searches must keep paging server-side');
+assert(js.includes('searchResult?.total_records'),'CSV export must use filtered total');
+console.log('Paper bet search verified:',searched.total_records,'matching recorded bets');
