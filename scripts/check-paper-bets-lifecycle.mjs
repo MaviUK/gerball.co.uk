@@ -28,7 +28,9 @@ class Element {
   addEventListener(name, listener) { if (!this.listeners.has(name)) this.listeners.set(name, []); this.listeners.get(name).push(listener); }
   dispatch(name) { return Promise.all((this.listeners.get(name) || []).map(listener => listener({ target: this, preventDefault() {} }))); }
   focus() { this.document.activeElement = this; }
-  click() { return this.dispatch('click'); }
+  click() { if (this.tagName === 'A' && this.download) this.document.downloads?.push({ filename: this.download, href: this.href }); return this.dispatch('click'); }
+  setCustomValidity(message) { this.validationMessage = message; }
+  reportValidity() { return !this.validationMessage; }
   querySelectorAll(selector) {
     const all = []; const walk = node => { for (const child of node.children) { all.push(child); walk(child); } }; walk(this);
     if (selector.startsWith('.')) return all.filter(node => node.className.split(/\s+/).includes(selector.slice(1)));
@@ -62,12 +64,51 @@ function report(now, fixtures = [fixture()], overrides = {}) {
     max_drawdown_units: 0, total_records: 1, records: [record()], preview: { fixtures }, ...overrides };
 }
 
-function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true) {
+
+function dayReport(date, records, { query = '', offset = 0, limit = 250, scope = 'date' } = {}) {
+  const settled = records.filter(row => row.status === 'settled');
+  const unitsSettled = settled.reduce((sum, row) => sum + row.units, 0);
+  const netUnits = Math.round(settled.reduce((sum, row) => sum + Number(row.net_units), 0) * 100) / 100;
+  return {
+    version: scope === 'today' ? 'paper_today_v1' : 'paper_day_v1', query, date,
+    total_records: records.length, records: records.slice(offset, offset + limit), limit, offset,
+    summary: {
+      bets: records.length, settled: settled.length,
+      pending: records.filter(row => row.status === 'pending').length,
+      review: records.filter(row => row.status === 'review').length,
+      won: settled.filter(row => row.won).length, lost: settled.filter(row => !row.won).length,
+      units_recommended: records.reduce((sum, row) => sum + row.units, 0),
+      units_settled: unitsSettled, net_units: netUnits,
+      roi_pct: unitsSettled ? Math.round(netUnits / unitsSettled * 10000) / 100 : null,
+    },
+  };
+}
+
+function dayResponse(call, state, records) {
+  const params = call.url.searchParams, scope = params.get('scope');
+  const date = scope === 'today' ? dates.day(state.now()) : params.get('date');
+  const query = (params.get('q') || '').trim().toLowerCase();
+  const matching = records.filter(row => dates.day(row.kickoff_at) === date).filter(row => !query ||
+    [row.home,row.away,row.league,row.market,row.bookmaker,row.status,row.event_id].some(value=>String(value??'').toLowerCase().includes(query)));
+  return Response.json(dayReport(date, matching, { query, scope, offset: Number(params.get('offset') || 0), limit: Number(params.get('limit') || 250) }));
+}
+
+async function chooseDate(ui, day) {
+  ui.scope().value = 'date'; await ui.scope().dispatch('change'); await flush();
+  assert(ui.date(), 'History calendar should be available near the top of Paper bets');
+  ui.date().value = day; await ui.date().dispatch('change'); await flush();
+}
+
+function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true, { scopedFetch } = {}) {
   let now = Date.parse(initial), timerId = 0;
-  const timers = new Map(), windowEvents = new Map(), documentEvents = new Map(), calls = [], scopedCalls = [];
+  const timers = new Map(), windowEvents = new Map(), documentEvents = new Map(), calls = [], scopedCalls = [], downloads = [], blobs = new Map();
   let lastReport = null;
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
-  const document = { hidden: false, visibilityState: 'visible', activeElement: null };
+  const document = { hidden: false, visibilityState: 'visible', activeElement: null, downloads };
+  class ObjectURL extends URL {
+    static createObjectURL(blob) { const url = 'blob:test-' + blobs.size; blobs.set(url, blob); return url; }
+    static revokeObjectURL(url) { blobs.delete(url); }
+  }
   document.createElement = tag => new Element(tag, document);
   document.documentElement = document.createElement('html'); document.body = document.createElement('body'); document.documentElement.append(document.body);
   const view = document.createElement('section'); view.id = 'view-picks'; view.hidden = !visible; document.body.append(view);
@@ -75,21 +116,23 @@ function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true) {
   document.getElementById = id => document.documentElement.querySelectorAll('#' + id)[0] || null;
   document.addEventListener = (name, fn) => { if (!documentEvents.has(name)) documentEvents.set(name, []); documentEvents.get(name).push(fn); };
   const schedule = (fn, delay = 0, interval = 0) => { const id = ++timerId; timers.set(id, { fn, at: now + Math.max(0, Number(delay) || 0), interval }); return id; };
-  const context = vm.createContext({ document, Date: Clock, Intl, URL, Blob, AbortController, AbortSignal,
+  const context = vm.createContext({ document, Date: Clock, Intl, URL: ObjectURL, Blob, AbortController, AbortSignal,
     CLOUD_URL: 'https://project.test', CLOUD_KEY: 'test-public-key',
     setTimeout: (fn, delay) => schedule(fn, delay), clearTimeout: id => timers.delete(id),
     setInterval: (fn, delay) => schedule(fn, delay, delay), clearInterval: id => timers.delete(id),
     addEventListener(name, fn) { if (!windowEvents.has(name)) windowEvents.set(name, []); windowEvents.get(name).push(fn); },
     fetch(url, options = {}) {
       const call = { url: new URL(url), options };
-      if (call.url.searchParams.get('scope') === 'today') {
+      if (['today', 'date'].includes(call.url.searchParams.get('scope'))) {
         scopedCalls.push(call);
+        if (scopedFetch) return Promise.resolve(scopedFetch(call, api));
+        const selectedDay = call.url.searchParams.get('scope') === 'today' ? dates.day(now) : call.url.searchParams.get('date');
         const query = (call.url.searchParams.get('q') || '').trim().toLowerCase();
-        const records = (lastReport?.records || []).filter(b => dates.day(b.kickoff_at) === dates.day(now)).filter(b =>
+        const records = (lastReport?.records || []).filter(b => dates.day(b.kickoff_at) === selectedDay).filter(b =>
           !query || [b.home,b.away,b.market,b.bookmaker,b.status,b.fixture_date,b.event_id].some(x=>String(x??'').toLowerCase().includes(query)));
         const offset = Number(call.url.searchParams.get('offset') || 0);
         const limit = Number(call.url.searchParams.get('limit') || 250);
-        return Promise.resolve(Response.json({ version:'paper_today_v1',query,date:dates.day(now),total_records:records.length,records:records.slice(offset,offset+limit) }));
+        return Promise.resolve(Response.json(dayReport(selectedDay, records, { query, offset, limit, scope: call.url.searchParams.get('scope') })));
       }
       calls.push(call);
       return Promise.resolve(fetchImpl(call, api)).then(async response => {
@@ -101,12 +144,13 @@ function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true) {
   context.window = context;
   const emit = (map, name, detail) => { for (const fn of map.get(name) || []) fn({ detail }); };
   const api = {
-    calls, scopedCalls, context, document, view, holder, timers, now: () => now,
+    calls, scopedCalls, context, document, view, holder, timers, downloads, blobs, now: () => now,
     find: className => holder.querySelectorAll('.' + className),
     cards: () => holder.querySelectorAll('.pb-match'),
     button: text => holder.querySelectorAll('button').find(button => button.textContent === text),
     search: () => document.getElementById('pb-search'),
-    selector: () => holder.querySelectorAll('select')[0],
+    selector: () => holder.querySelectorAll('select').find(node => node.attributes.get('aria-label') === 'Show assessments'),
+    date: () => document.getElementById('pb-ledger-date'),
     scope: () => document.getElementById('pb-ledger-scope'),
     async activate() { view.hidden = false; emit(windowEvents, 'gerball:viewchange', { view: 'picks' }); await flush(); },
     leave() { view.hidden = true; emit(windowEvents, 'gerball:viewchange', { view: 'overview' }); },
@@ -304,7 +348,7 @@ test('freshness filter never changes saved recommendations, P&L or paper ledger'
  const score=ui.find('pb-dashboard')[0].textContent, ledger=ui.find('pb-ledger')[0].textContent;
  assert.equal(ui.cards().length,3);
  assert.match(ui.find('pb-match')[0].textContent,/Recent saved quote/);
- const control=ui.holder.querySelectorAll('select')[1];
+ const control=ui.holder.querySelectorAll('select').find(node=>node.attributes.get('aria-label')==='Show price freshness');
  assert(control&&control.attributes.get('aria-label')==='Show price freshness');
  control.value='recent';await control.dispatch('change');
  assert.equal(ui.cards().length,1);assert.match(ui.cards()[0].textContent,/Home recent/);
@@ -316,4 +360,210 @@ test('freshness filter never changes saved recommendations, P&L or paper ledger'
  assert.equal(ui.cards().length,3);
  assert.equal(ui.find('pb-dashboard')[0].textContent,score);
  assert.equal(ui.find('pb-ledger')[0].textContent,ledger);
+});
+
+test('history calendar selects UK kickoff dates, exposes outcomes, and preserves lifetime totals', async () => {
+  const oldDay = '2026-11-24', kickoff_at = oldDay + 'T20:00:00Z';
+  const records = [
+    record('Won recorded bet', { kickoff_at, units: 3, odds: 2.5, net_units: 4.5 }),
+    record('Lost recorded bet', { kickoff_at, units: 1, won: false, net_units: -1, home_goals: 0, away_goals: 2 }),
+    record('Pending recorded bet', { kickoff_at, status: 'pending', won: null, net_units: null, home_goals: null, away_goals: null }),
+    record('Review recorded bet', { kickoff_at, status: 'review', won: null, net_units: null, home_goals: null, away_goals: null }),
+    record('Today recorded bet', { kickoff_at: '2026-11-25T20:00:00Z' }),
+  ];
+  const ui = app((call, state) => Response.json(report(state.now(), [fixture()], { records, total_records: records.length })), undefined, true, {
+    scopedFetch: (call, state) => dayResponse(call, state, records),
+  });
+  await flush();
+  assert.equal(ui.scope().value, 'today'); assert.equal(ui.date().max, '2026-11-25');
+  const lifetime = ui.find('pb-dashboard')[0].textContent;
+  await chooseDate(ui, oldDay);
+  assert.equal(ui.find('pb-assessments')[0].hidden, true, 'Historical viewing must not present today’s recommendations as historical bets');
+  const request = ui.scopedCalls.at(-1).url.searchParams;
+  assert.equal(request.get('scope'), 'date'); assert.equal(request.get('date'), oldDay);
+  const ledger = ui.find('pb-ledger')[0];
+  assert.match(ledger.textContent, /Won recorded bet/); assert.match(ledger.textContent, /Lost recorded bet/);
+  assert.doesNotMatch(ledger.textContent, /Today recorded bet/);
+  const rows = ledger.querySelectorAll('tr');
+  const won = rows.find(row => row.textContent.includes('Won recorded bet'));
+  const lost = rows.find(row => row.textContent.includes('Lost recorded bet'));
+  const pending = rows.find(row => row.textContent.includes('Pending recorded bet'));
+  const review = rows.find(row => row.textContent.includes('Review recorded bet'));
+  assert.match(won.textContent, /Won/); assert.match(won.textContent, /2\s*[-–]\s*0/); assert.match(won.textContent, /\+4\.50/);
+  assert.match(lost.textContent, /Lost/); assert.match(lost.textContent, /0\s*[-–]\s*2/); assert.match(lost.textContent, /-1\.00/);
+  assert.match(pending.textContent, /Pending/); assert.doesNotMatch(pending.textContent, /null|\+0\.00|-0\.00/);
+  assert.match(review.textContent, /Needs review/); assert.doesNotMatch(review.textContent, /null|\+0\.00|-0\.00/);
+  assert.equal(ui.find('pb-dashboard')[0].textContent, lifetime, 'Daily browsing must preserve lifetime P&L');
+  const daySummary = ui.find('pb-day-summary')[0];
+  assert(daySummary, 'Date-scoped performance is labeled separately from lifetime totals');
+  assert.match(daySummary.textContent, /3\.50/);
+  assert.match(daySummary.textContent, /87\.50%|87\.5%/);
+});
+
+test('date paging, search and refresh retain the selected day and whole-day summary', async () => {
+  const records = Array.from({ length: 501 }, (_, index) => record('Arsenal saved ' + index, {
+    kickoff_at: '2026-11-24T20:00:00Z', units: 1, odds: 2, net_units: 1,
+  }));
+  const ui = app((call, state) => Response.json(report(state.now(), [], { records: records.slice(0, 250), total_records: 501 })), undefined, true, {
+    scopedFetch: (call, state) => dayResponse(call, state, records),
+  });
+  await flush(); await chooseDate(ui, '2026-11-24');
+  const fullSummary = ui.find('pb-day-summary')[0].textContent;
+  assert.match(fullSummary, /501/); assert.match(fullSummary, /501\.00/);
+  assert.doesNotMatch(fullSummary, /250\.00/, 'Summary must include the full day, not the first table page');
+  ui.search().value = 'Arsenal'; await ui.search().dispatch('input'); await ui.advance(250);
+  await ui.button('Next page').dispatch('click'); await flush();
+  assert.match(ui.find('pb-ledger')[0].textContent, /Arsenal saved 250/);
+  assert.doesNotMatch(ui.find('pb-ledger')[0].textContent, /Arsenal saved 0\b/);
+  const pageRequest = ui.scopedCalls.at(-1).url.searchParams;
+  assert.equal(pageRequest.get('date'), '2026-11-24'); assert.equal(pageRequest.get('q'), 'arsenal');
+  assert.equal(pageRequest.get('offset'), '250');
+  await ui.advance(5 * 60000 + 30000);
+  const refresh = ui.scopedCalls.at(-1).url.searchParams;
+  assert.equal(refresh.get('date'), '2026-11-24'); assert.equal(refresh.get('q'), 'arsenal');
+  assert.equal(refresh.get('offset'), '250'); assert.equal(ui.date().value, '2026-11-24');
+  assert.match(ui.find('pb-day-summary')[0].textContent, /501\.00/);
+  await ui.button('Clear').dispatch('click'); await flush(); await ui.advance(250);
+  assert.equal(ui.date().value, '2026-11-24'); assert.equal(ui.scopedCalls.at(-1).url.searchParams.get('offset'), '0');
+  assert.match(ui.find('pb-ledger')[0].textContent, /Arsenal saved 0\b/);
+});
+
+test('a late request for another history date cannot replace the selected date', async () => {
+  const old = deferred();
+  const records = [record('Current selected day', { kickoff_at: '2026-11-24T20:00:00Z' })];
+  const ui = app((call, state) => Response.json(report(state.now(), [])), undefined, true, {
+    scopedFetch: (call, state) => call.url.searchParams.get('date') === '2026-11-23' ? old.promise : dayResponse(call, state, records),
+  });
+  await flush(); await chooseDate(ui, '2026-11-24');
+  ui.date().value = '2026-11-23'; ui.date().dispatch('change'); await flush();
+  const obsolete = ui.scopedCalls.at(-1); assert.equal(obsolete.url.searchParams.get('date'), '2026-11-23');
+  ui.date().value = '2026-11-24'; await ui.date().dispatch('change'); await flush();
+  assert.equal(obsolete.options.signal.aborted, true);
+  assert.match(ui.find('pb-ledger')[0].textContent, /Current selected day/);
+  old.resolve(Response.json(dayReport('2026-11-23', [record('Obsolete old date', { kickoff_at: '2026-11-23T20:00:00Z' })]))); await flush();
+  assert.equal(ui.date().value, '2026-11-24');
+  assert.match(ui.find('pb-ledger')[0].textContent, /Current selected day/);
+  assert.doesNotMatch(ui.find('pb-ledger')[0].textContent, /Obsolete old date/);
+});
+
+test('a selected historical date stays fixed across GMT and BST midnight, while Today rolls forward', async () => {
+  for (const [initial, historicalDay, nextDay] of [
+    ['2026-11-25T23:59:40Z', '2026-11-24', '2026-11-26'],
+    ['2026-07-12T22:59:40Z', '2026-07-11', '2026-07-13'],
+  ]) {
+    const records = [record('Earlier recorded bet', { kickoff_at: historicalDay + 'T20:00:00Z' })];
+    const ui = app((call, state) => Response.json(report(state.now(), [])), initial, true, {
+      scopedFetch: (call, state) => dayResponse(call, state, records),
+    });
+    await flush(); await chooseDate(ui, historicalDay); await ui.advance(20000);
+    assert.equal(ui.date().value, historicalDay, 'Midnight must not change an explicitly chosen history date');
+    assert.equal(ui.scopedCalls.at(-1).url.searchParams.get('date'), historicalDay);
+    assert.match(ui.find('pb-ledger')[0].textContent, /Earlier recorded bet/);
+    assert.equal(ui.date().max, nextDay);
+    await ui.button('Today').dispatch('click'); await flush();
+    assert.equal(ui.scope().value, 'today'); assert.equal(ui.date().value, nextDay);
+    assert.equal(ui.find('pb-assessments')[0].hidden, false);
+    assert.equal(ui.scopedCalls.at(-1).url.searchParams.get('scope'), 'today');
+  }
+});
+
+test('day navigation cannot move into the future and valid days can be reached across month changes', async () => {
+  const ui = app((call, state) => Response.json(report(state.now(), [])), '2026-03-01T13:00:00Z');
+  await flush(); assert.equal(ui.button('Next day').disabled, true);
+  await ui.button('Previous day').dispatch('click'); await flush();
+  assert.equal(ui.date().value, '2026-02-28');
+  assert.equal(ui.scopedCalls.at(-1).url.searchParams.get('date'), '2026-02-28');
+  assert.equal(ui.button('Next day').disabled, false);
+  await ui.button('Next day').dispatch('click'); await flush();
+  assert.equal(ui.date().value, '2026-03-01'); assert.equal(ui.button('Next day').disabled, true);
+  const before = ui.scopedCalls.length;
+  ui.date().value = '2026-03-02'; await ui.date().dispatch('change'); await flush();
+  assert(!ui.scopedCalls.slice(before).some(call => call.url.searchParams.get('date') === '2026-03-02'), 'Future dates must not be requested');
+});
+
+test('date CSV export keeps its selected date and search even if the view changes mid-download', async () => {
+  const records = Array.from({ length: 1001 }, (_, index) => record('Export old-day Arsenal ' + index, {
+    kickoff_at: '2026-11-24T20:00:00Z', units: 1, odds: 2, net_units: 1,
+  }));
+  const laterPage = deferred(); let laterCall = null;
+  const ui = app((call, state) => Response.json(report(state.now(), [], { records: records.slice(0, 250), total_records: records.length })), undefined, true, {
+    scopedFetch: (call, state) => {
+      if (call.url.searchParams.get('limit') === '1000' && call.url.searchParams.get('offset') === '1000') {
+        laterCall = call; return laterPage.promise;
+      }
+      return dayResponse(call, state, records);
+    },
+  });
+  await flush(); await chooseDate(ui, '2026-11-24');
+  ui.search().value = 'arsenal'; await ui.search().dispatch('input'); await ui.advance(250);
+  const button = ui.holder.querySelectorAll('button').find(node => /^Export/.test(node.textContent));
+  const exporting = button.dispatch('click'); await flush();
+  assert(laterCall, 'Export should fetch the second page of the selected day');
+  ui.date().value = '2026-11-23'; await ui.date().dispatch('change'); await flush();
+  laterPage.resolve(dayResponse(laterCall, ui, records)); await exporting; await flush();
+  const exportRequests = ui.scopedCalls.filter(call => call.url.searchParams.get('limit') === '1000');
+  assert.equal(exportRequests.length, 2);
+  for (const call of exportRequests) {
+    assert.equal(call.url.searchParams.get('date'), '2026-11-24');
+    assert.equal(call.url.searchParams.get('q'), 'arsenal');
+  }
+  assert.equal(ui.downloads.length, 1);
+  assert.match(ui.downloads[0].filename, /2026-11-24/);
+  const csv = await ui.blobs.get(ui.downloads[0].href).text();
+  assert.match(csv, /Export old-day Arsenal 0/); assert.match(csv, /Export old-day Arsenal 1000/);
+  assert.equal(csv.split('\r\n').length, 1002, 'All saved bets and one header are exported exactly once');
+});
+
+test('Today CSV pins the kickoff date when UK midnight occurs during a multi-page download', async () => {
+  const records = Array.from({ length: 1001 }, (_, index) => record('Today export ' + index, {
+    kickoff_at: '2026-11-25T20:00:00Z', units: 1, odds: 2, net_units: 1,
+  }));
+  const laterPage = deferred(); let laterCall = null;
+  const ui = app((call, state) => Response.json(report(state.now(), [], { records: records.slice(0, 250), total_records: records.length })), '2026-11-25T23:59:40Z', true, {
+    scopedFetch: (call, state) => {
+      if (call.url.searchParams.get('limit') === '1000' && call.url.searchParams.get('offset') === '1000') {
+        laterCall = call; return laterPage.promise;
+      }
+      return dayResponse(call, state, records);
+    },
+  });
+  await flush();
+  const button = ui.holder.querySelectorAll('button').find(node => /^Export/.test(node.textContent));
+  const exporting = button.dispatch('click'); await flush();
+  assert(laterCall); await ui.advance(20000);
+  assert.equal(ui.date().value, '2026-11-26', 'The Today view may roll forward during export');
+  laterPage.resolve(dayResponse(laterCall, ui, records)); await exporting; await flush();
+  for (const call of ui.scopedCalls.filter(call => call.url.searchParams.get('limit') === '1000')) {
+    assert.equal(call.url.searchParams.get('scope'), 'date');
+    assert.equal(call.url.searchParams.get('date'), '2026-11-25', 'Every export page uses the original day');
+  }
+  assert.equal(ui.downloads.length, 1); assert.match(ui.downloads[0].filename, /2026-11-25/);
+  const csv = await ui.blobs.get(ui.downloads[0].href).text();
+  assert.equal(csv.split('\r\n').length, 1002); assert.match(csv, /Today export 1000/);
+});
+
+test('a delayed automatic report refresh cannot undo date-ledger pagination chosen while it was loading', async () => {
+  const records = Array.from({ length: 501 }, (_, index) => record('History page bet ' + index, {
+    kickoff_at: '2026-11-24T20:00:00Z', units: 1, odds: 2, net_units: 1,
+  }));
+  const refreshedReport = deferred(); let reports = 0;
+  const ui = app((call, state) => ++reports === 1
+    ? Response.json(report(state.now(), [], { records: records.slice(0, 250), total_records: records.length }))
+    : refreshedReport.promise, undefined, true, {
+    scopedFetch: (call, state) => dayResponse(call, state, records),
+  });
+  await flush(); await chooseDate(ui, '2026-11-24');
+  assert.equal(ui.button('Previous page').disabled, true);
+  await ui.advance(5 * 60000);
+  assert.equal(reports, 2, 'The full report is refreshing in the background');
+  await ui.button('Next page').dispatch('click'); await flush();
+  assert.match(ui.find('pb-ledger')[0].textContent, /History page bet 250/);
+  assert.equal(ui.scopedCalls.at(-1).url.searchParams.get('offset'), '250');
+  refreshedReport.resolve(Response.json(report(ui.now(), [], { records: records.slice(0, 250), total_records: records.length })));
+  await flush();
+  assert.equal(ui.date().value, '2026-11-24');
+  assert.equal(ui.scopedCalls.at(-1).url.searchParams.get('offset'), '250', 'The late report must refresh the user’s current page');
+  assert.equal(ui.button('Previous page').disabled, false);
+  assert.match(ui.find('pb-ledger')[0].textContent, /History page bet 250/);
+  assert.doesNotMatch(ui.find('pb-ledger')[0].textContent, /History page bet 0\b/);
 });

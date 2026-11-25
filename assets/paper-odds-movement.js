@@ -15,8 +15,7 @@ for(const [val,title] of [['all','All sampled comparisons'],['positive','Model e
 controls.append(label,select);section.append(controls);
 const tableHost=el('div');section.append(tableHost);
 section.append(el('p','The model probability is kept fixed when estimating the later edge. No updated match prediction, executed price, fee calculation or realized profit is implied. Results are a biased sample: only fixtures selected by the quota-limited refresh appear.','pb-caption'));
-const ledger=parent.querySelector('.pb-ledger');
-if(ledger)parent.insertBefore(section,ledger);else parent.append(section);
+parent.append(section);
 let data=null,loading=false,loaded=false;
 const date=x=>{const t=new Date(x);return Number.isFinite(t.getTime())?t.toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' UK':'—'};
 const pct=x=>Number.isFinite(Number(x))?Number(x).toFixed(2)+'%':'—';

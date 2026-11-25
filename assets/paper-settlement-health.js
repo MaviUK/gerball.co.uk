@@ -20,7 +20,7 @@ const detail=el('p','','pb-caption');panel.append(detail);
 const heading=el('h3','Past matches still awaiting a result');panel.append(heading);
 const tableBox=el('div',undefined,'pb-table-wrap');panel.append(tableBox);
 panel.append(el('p','A pending bet is not a loss. Scores are settled only from the imported football-data.co.uk record, after the original match has finished. Imports may lag kickoffs; a correction updates the current displayed units without rewriting the original paper bet.','pb-caption'));
-const ledger=parent.querySelector('.pb-ledger');if(ledger)parent.insertBefore(panel,ledger);else parent.append(panel);
+parent.append(panel);
 let started=false,loading=false;
 function tile(label,value){const box=el('div',undefined,'pb-health-tile');box.append(el('small',label),el('strong',value));return box}
 function render(report){

@@ -61,6 +61,56 @@
 #paperBets .pb-ledger-scope label{font-size:13px;font-weight:650;color:#d6e5f7}
 #paperBets .pb-ledger-scope select{width:auto;min-width:155px;min-height:40px}
 
+#paperBets .pb-history-filters{padding:18px;background:#10243a;border:1px solid #3b6075;border-radius:12px;margin:20px 0}
+#paperBets .pb-ledger-scope{margin:0 0 16px;align-items:flex-end}
+#paperBets .pb-ledger-scope label,#paperBets .pb-date-field label{font-size:.875rem;font-weight:650;color:#d6e5f7}
+#paperBets .pb-ledger-scope select{font-size:1rem;min-height:44px;flex:1;max-width:310px}
+#paperBets .pb-date-navigation{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+#paperBets .pb-date-field{display:flex;flex-direction:column;gap:8px;flex:1;min-width:180px;max-width:310px}
+#paperBets .pb-date-field input{width:100%;min-width:0;min-height:46px;font-size:1rem;color-scheme:dark}
+#paperBets .pb-day-buttons{display:flex;gap:8px;flex-wrap:wrap}
+#paperBets .pb-day-buttons button{width:auto;min-height:46px;font-size:.875rem;white-space:nowrap;padding:10px 14px}
+#paperBets .pb-history-filters .pb-caption{margin:12px 0 0;font-size:.875rem;line-height:1.5}
+#paperBets .pb-lifetime{margin-top:14px;border-top:1px solid #30465e;padding-top:14px}
+#paperBets .pb-lifetime summary{cursor:pointer;font-size:1rem;font-weight:650;padding:8px 0;color:#a4e7cf}
+#paperBets .pb-day-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:20px 0 12px}
+#paperBets .pb-day-metric{background:#0f2033;border:1px solid #304b66;border-radius:10px;padding:14px;min-width:0}
+#paperBets .pb-day-metric span{display:block;color:#b2c3d4;font-size:.875rem;line-height:1.4;min-height:2.8em}
+#paperBets .pb-day-metric strong{display:block;margin-top:5px;font-size:1.5rem;font-variant-numeric:tabular-nums}
+#paperBets .pb-ledger .pb-caption{font-size:.875rem;line-height:1.6}
+#paperBets .pb-history-table{margin-top:16px}
+#paperBets .pb-history-table th,#paperBets .pb-history-table td{font-size:.875rem;line-height:1.5;white-space:normal}
+#paperBets .pb-record-league{display:block;color:#a8bcd1;font-size:.875rem;margin-top:4px}
+#paperBets .pb-outcome{display:inline-block;font-size:.875rem;font-weight:700;border-radius:7px;padding:4px 9px;white-space:nowrap}
+#paperBets .pb-outcome-won{background:#164533;color:#a5efd0}
+#paperBets .pb-outcome-lost{background:#53303a;color:#ffbfc7}
+#paperBets .pb-outcome-pending{background:#483c21;color:#f4d99b}
+#paperBets .pb-assessments{margin-top:20px}
+#paperBets [hidden]{display:none!important}
+#paperBets .pb-history-filters input:focus-visible,#paperBets .pb-history-filters select:focus-visible,#paperBets .pb-history-filters button:focus-visible{outline:2px solid #81d9b4;outline-offset:3px}
+@media(max-width:1000px){#paperBets .pb-day-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){
+ #paperBets .pb-history-filters{padding:14px}
+ #paperBets .pb-ledger-scope{display:block}
+ #paperBets .pb-ledger-scope label{display:block;margin-bottom:8px}
+ #paperBets .pb-ledger-scope select,#paperBets .pb-date-field{max-width:none;width:100%}
+ #paperBets .pb-date-field{flex-basis:100%}
+ #paperBets .pb-day-buttons{display:grid;grid-template-columns:1.35fr 1fr .85fr;width:100%}
+ #paperBets .pb-day-buttons button{min-width:0;padding:10px 6px}
+ #paperBets .pb-day-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #paperBets .pb-day-metric{padding:12px}
+ #paperBets .pb-day-metric span{min-height:0}
+ #paperBets .pb-history-table{overflow:visible;border:0;border-radius:0}
+ #paperBets .pb-history-table table,#paperBets .pb-history-table tbody{display:block;min-width:0;width:100%}
+ #paperBets .pb-history-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ #paperBets .pb-history-table tr{display:block;padding:15px;background:#102239;border:1px solid #304b66;border-radius:10px;margin-bottom:12px}
+ #paperBets .pb-history-table td{display:flex;justify-content:space-between;align-items:baseline;gap:18px;border:0;padding:5px 0;text-align:right;overflow-wrap:anywhere}
+ #paperBets .pb-history-table td::before{content:attr(data-label);font-size:.875rem;color:#a8bcd1;text-align:left;flex-shrink:0}
+ #paperBets .pb-history-table td:first-child{display:block;text-align:left;font-weight:700;font-size:1rem;padding:0 0 10px;margin-bottom:6px;border-bottom:1px solid #304b66}
+ #paperBets .pb-history-table td:first-child::before,#paperBets .pb-history-table .pb-ledger-empty::before{display:none}
+ #paperBets .pb-history-table .pb-ledger-empty{border:0;margin:0;padding:0;font-size:.875rem;font-weight:400}
+}
+
 #paperBets .pb-match .pb-tags .pb-price-recent{background:#164533;color:#a5efd0}
 #paperBets .pb-match .pb-tags .pb-price-aging{background:#483c21;color:#f4d99b}
 #paperBets .pb-match .pb-tags .pb-price-old,#paperBets .pb-match .pb-tags .pb-price-unverified,#paperBets .pb-match .pb-tags .pb-price-unavailable{background:#53303a;color:#ffbfc7}

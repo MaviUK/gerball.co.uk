@@ -19,7 +19,7 @@ choices.append(limitLabel,limit);section.append(choices);
 const status=el('p','Report not loaded','pb-caption');status.setAttribute('role','status');section.append(status);
 const tableHost=el('div',undefined,'pb-table-wrap');section.append(tableHost);
 const note=el('p','Returns are shown only for settled matches. A group with no settled bets has no ROI and no demonstrated track record. Each team grouping is separate, so home-team and away-team totals should not be added together.','pb-caption');section.append(note);
-const anchor=parent.querySelector('.pb-ledger');if(anchor)parent.insertBefore(section,anchor);else parent.append(section);
+parent.append(section);
 let report=null,loading=false,loaded=false;
 function formatNumber(value){const n=Number(value);return Number.isFinite(n)?n.toFixed(2):'—'}
 function render(){

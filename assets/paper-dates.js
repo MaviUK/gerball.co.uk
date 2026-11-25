@@ -6,6 +6,17 @@ function day(value){
  const p=Object.fromEntries(london.formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
  return p.year+'-'+p.month+'-'+p.day;
 }
+function validDay(value){
+ if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||value<'0001-01-01')return false;
+ const parsed=new Date(value+'T12:00:00Z');
+ return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value;
+}
+function shiftDay(value,amount){
+ if(!validDay(value)||!Number.isInteger(amount))return null;
+ const parsed=new Date(value+'T12:00:00Z');parsed.setUTCDate(parsed.getUTCDate()+amount);
+ const shifted=parsed.toISOString().slice(0,10);
+ return validDay(shifted)?shifted:null;
+}
 function isToday(fixture,now=new Date()){
  return !!fixture&&day(fixture.kickoff_at)!==null&&day(fixture.kickoff_at)===day(now);
 }
@@ -47,5 +58,5 @@ function priceState(fixture,now=new Date()){
  return{status:'aging',label:'Aging saved quote',detail:'Saved price is older than 15 minutes; verify current odds before considering any stake.',captureMinutes,providerMinutes};
  return{status:'old',label:'Old saved quote',detail:'Price is older than 2 hours or provider-updated too long ago; research only, not a usable quote.',captureMinutes,providerMinutes};
 }
-return{day,isToday,todayOnly,upcomingToday,nextChangeAt,priceState};
+return{day,validDay,shiftDay,isToday,todayOnly,upcomingToday,nextChangeAt,priceState};
 });

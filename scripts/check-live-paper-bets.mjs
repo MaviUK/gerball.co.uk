@@ -79,8 +79,6 @@ assert.deepEqual(noMatches.records,[]);
 const excessive=await get('?q='+encodeURIComponent('x'.repeat(101)),{headers:{apikey:key}});
 assert.equal(excessive.status,400,'Search input length must be limited');
 assert(js.includes('searchInput.type=\'search\''),'Search input must exist');
-assert(js.includes('searchLedger(page+1)'),'Filtered searches must keep paging server-side');
-assert(js.includes('searchResult?.total_records'),'CSV export must use filtered total');
 console.log('Paper bet search verified:',searched.total_records,'matching recorded bets');
 
 const breakdownEndpoint=url+'/functions/v1/gerball-paper-breakdown';
@@ -183,5 +181,78 @@ const invalidScope=await get('?scope=tomorrow',{headers:{apikey:key}});
 assert.equal(invalidScope.status,400,'Tomorrow or future bets must not be exposed as Today');
 assert(js.includes("ledgerScope='today'"),'Default page should show today');
 assert(js.includes("scopeSelect.addEventListener('change'"),'Complete history must remain accessible');
-assert(js.includes("scope==='today'?'&scope=today'"),'Date-scoped server paging must be used');
+assert(js.includes('pb-ledger-date'),'Calendar must make saved dates accessible');
 console.log('Today-only paper bets verified:',today.total_records,'UK-day records; historical ledger intact');
+
+
+function assertDaySummary(day) {
+ assert(day.summary && !Array.isArray(day.summary), 'Daily results need a summary over the complete matching day');
+ const s = day.summary;
+ assert.equal(s.bets, day.total_records);
+ assert.equal(s.bets, s.settled + s.pending + s.review);
+ assert.equal(s.settled, s.won + s.lost);
+ assert.equal(s.roi_pct === null, Number(s.units_settled) === 0);
+ assert(Number.isFinite(Number(s.net_units)));
+ for (const bet of day.records) {
+  assert.equal(paperDates.day(bet.kickoff_at), day.date, 'Historical rows belong to the selected UK kickoff day');
+  if (bet.status === 'settled') {
+   const expected = bet.won ? Math.round(100 * bet.units * (Number(bet.odds) - 1)) / 100 : -bet.units;
+   assert.equal(typeof bet.won, 'boolean');
+   assert(Math.abs(Number(bet.net_units) - expected) < 0.011, 'Archived results retain the original stake and odds');
+  } else assert.equal(bet.net_units, null, 'Pending/review dates never invent a loss or return');
+ }
+ if (day.records.length === day.total_records) {
+  const settled = day.records.filter(bet => bet.status === 'settled');
+  assert.equal(settled.length, s.settled);
+  const net = settled.reduce((sum, bet) => sum + Number(bet.net_units), 0);
+  const units = settled.reduce((sum, bet) => sum + Number(bet.units), 0);
+  assert(Math.abs(net - Number(s.net_units)) < 0.011);
+  assert.equal(units, Number(s.units_settled));
+  if (units) assert(Math.abs(100 * net / units - Number(s.roi_pct)) < 0.011, 'Daily ROI divides by settled units only');
+ }
+}
+assertDaySummary(today);
+const sameDayResponse = await get('?scope=date&date=' + todayUK + '&limit=250', { headers: { apikey: key } });
+assert.equal(sameDayResponse.status, 200, 'Explicit date history must be available');
+const sameDay = await sameDayResponse.json();
+assert.equal(sameDay.version, 'paper_day_v1'); assert.equal(sameDay.date, todayUK); assert.equal(sameDay.query, '');
+assertDaySummary(sameDay);
+assert.deepEqual(sameDay.records.map(bet => bet.id), today.records.map(bet => bet.id), 'Today and its explicit date identify the same saved bets');
+assert.deepEqual(sameDay.summary, today.summary);
+const earlier = data.records.map(bet => paperDates.day(bet.kickoff_at)).find(day => day && day < todayUK);
+const selectedDay = earlier || todayUK;
+const historyResponse = await get('?scope=date&date=' + selectedDay + '&limit=1000', { headers: { apikey: key } });
+assert.equal(historyResponse.status, 200);
+const historyDay = await historyResponse.json(); assertDaySummary(historyDay);
+assert.equal(historyDay.date, selectedDay);
+const dayPage = await get('?scope=date&date=' + selectedDay + '&limit=1&offset=0', { headers: { apikey: key } });
+assert.equal(dayPage.status, 200);
+const firstPage = await dayPage.json();
+assert.deepEqual(firstPage.summary, historyDay.summary, 'Daily totals must not shrink with the table page');
+assert.equal(firstPage.total_records, historyDay.total_records);
+assert.equal(firstPage.records.length, Math.min(1, historyDay.total_records));
+if (historyDay.total_records > 1) {
+ const secondResponse = await get('?scope=date&date=' + selectedDay + '&limit=1&offset=1', { headers: { apikey: key } });
+ assert.equal(secondResponse.status, 200);
+ const secondPage = await secondResponse.json();
+ assert.notEqual(secondPage.records[0].id, firstPage.records[0].id);
+ assert.equal(secondPage.records[0].id, historyDay.records[1].id, 'Date pagination preserves stable ledger ordering');
+ assert.deepEqual(secondPage.summary, historyDay.summary);
+}
+const dateSearchResponse = await get('?scope=date&date=' + selectedDay + '&q=__no_such_team_987654321__&limit=25', { headers: { apikey: key } });
+assert.equal(dateSearchResponse.status, 200);
+const dateSearch = await dateSearchResponse.json();
+assert.equal(dateSearch.version, 'paper_day_v1'); assert.equal(dateSearch.date, selectedDay);
+assert.equal(dateSearch.total_records, 0); assert.deepEqual(dateSearch.records, []); assertDaySummary(dateSearch);
+assert.equal(dateSearch.summary.roi_pct, null);
+const tomorrowUK = new Date(Date.parse(todayUK + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
+for (const path of [
+ '?scope=date', '?scope=date&date=2026-02-30', '?scope=date&date=2026-13-01',
+ '?scope=date&date=2026-1-01', '?scope=date&date=' + tomorrowUK,
+ '?date=' + selectedDay, '?scope=history&date=' + selectedDay,
+ '?scope=date&date=' + selectedDay + '&date=' + selectedDay,
+]) {
+ const invalidDate = await get(path, { headers: { apikey: key } });
+ assert.equal(invalidDate.status, 400, 'Invalid or ambiguous calendar scope rejected: ' + path);
+}
+console.log('Date history verified:', selectedDay, historyDay.total_records, 'saved bets;', historyDay.summary.settled, 'settled;', historyDay.summary.net_units, 'net units; pagination, search and immutable prices reconcile');
