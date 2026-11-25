@@ -121,3 +121,15 @@ for (const row of history) {
 
 console.log('Live research reports passed: 13 coverage metrics with archive denominators, four comparison RPCs and complete known-team history.');
 console.log(JSON.stringify({ league, season, stored_matches: matchCount, checks: timings }));
+
+const readinessUrl=url+'/functions/v1/gerball-price-readiness';
+const readinessResponse=await fetch(readinessUrl,{headers:{apikey:key},signal:AbortSignal.timeout(15000)});
+assert.equal(readinessResponse.status,200,'Readiness Edge Function must respond to the public site application key');
+const readiness=await readinessResponse.json();
+assert(Number.isInteger(readiness.total_observations)&&readiness.total_observations>0,'Readiness needs actual saved observations');
+assert(Number.isInteger(readiness.qualifying_markets)&&Number.isInteger(readiness.priced_markets),'Readiness counts must be integers');
+assert.equal(readiness.qualifying_markets,readiness.priced_markets+readiness.unpriced_markets,'Qualified and priced totals must reconcile');
+assert(Array.isArray(readiness.markets)&&readiness.markets.every(m=>m.qualifying>=m.priced),'Market totals must be valid');
+const denied=await fetch(readinessUrl,{signal:AbortSignal.timeout(15000)});
+assert.equal(denied.status,401,'Readiness endpoint rejects missing application key');
+console.log('Readiness endpoint verified',readiness.capture_date,readiness.priced_markets,'of',readiness.qualifying_markets,'priced');
