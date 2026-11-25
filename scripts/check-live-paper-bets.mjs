@@ -109,3 +109,29 @@ const groupedUi=fs.readFileSync(new URL('../assets/paper-breakdown.js',import.me
 assert(html.includes('assets/paper-breakdown.js'));
 assert(groupedUi.includes('gerball:viewchange')&&groupedUi.includes('pb-breakdown-kind'));
 console.log('Paper betting performance groups verified:',breakdown.groups.length,'categories and',breakdown.total_bets,'bets');
+
+const healthEndpoint=url+'/functions/v1/gerball-paper-settlement-health';
+const healthNoKey=await fetch(healthEndpoint,{signal:AbortSignal.timeout(18000)});
+assert.equal(healthNoKey.status,401,'Settlement health must require application key');
+const healthNoWrite=await fetch(healthEndpoint,{method:'POST',headers:{apikey:key},signal:AbortSignal.timeout(18000)});
+assert.equal(healthNoWrite.status,405,'Settlement monitor has no public write endpoint');
+const healthResponse=await fetch(healthEndpoint,{headers:{apikey:key},signal:AbortSignal.timeout(30000)});
+assert.equal(healthResponse.status,200,'Settlement health must be accessible');
+const health=await healthResponse.json();
+assert.equal(health.version,'paper_settlement_health_v1');
+assert.equal(health.records_total,data.total_records);
+assert.equal(health.settled,summary.settled);
+assert(health.stages.reduce((n,row)=>n+row.bets,0)===health.records_total);
+assert(health.pending_after_grace>=0&&health.late_over_48_hours>=0);
+assert(health.late_over_48_hours<=health.pending_after_grace+health.review);
+assert(health.revisions&&Number.isInteger(health.revisions.total_revisions));
+assert(Array.isArray(health.unsettled_examples)&&health.unsettled_examples.length<=40);
+for(const row of health.unsettled_examples){
+ assert(row.stage!=='settled');
+ assert(Number(row.hours_since_kickoff)>=3);
+ assert(row.paper_id&&row.observation_id);
+}
+const settlementUi=fs.readFileSync(new URL('../assets/paper-settlement-health.js',import.meta.url),'utf8');
+assert(html.includes('/assets/paper-settlement-health.js'));
+assert(settlementUi.includes('paper_settlement_health_v1'));
+console.log('Paper settlement health verified:',health.records_total,'tracked,',health.settled,'settled,',health.pending_after_grace,'past grace');

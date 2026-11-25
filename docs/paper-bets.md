@@ -57,3 +57,11 @@ A new read-only group report displays every saved paper selection by market, lea
 The `public.gerball_paper_breakdown()` function is a SECURITY INVOKER, executable only by service role. The read-only `gerball-paper-breakdown` Edge Function is GET-only, verifies the website publishable key and rejects inconsistent aggregates. The data feeds the new performance panel in Paper bets & P&L without changing any bets or profit accounting.
 
 Importantly, early samples can have zero settlements: **do not rank a group by ROI or describe it as profitable** if it has no settled matches. Home and away groupings are separate dimensions and cannot be added together.
+
+## Result settlement monitoring and correction safety
+
+The new Settlement monitoring panel shows separate states for upcoming fixtures, recently started fixtures, awaiting hourly reconciliation, awaiting imported match results, manual review and settled wagers. A bet is not treated as lost merely because a result has not been imported. Result monitoring is read-only and uses the existing hourly reconciliation schedule; it does not trigger external sports-data requests.
+
+The hourly reconcile routine previously used revision 1 for every newly appended result, including subsequent score corrections. This has been repaired to append `coalesce(v_revision,0)+1`, so the latest accepted result can supersede earlier outcomes without deleting or overwriting history. The original saved wager, odds and units are immutable. Result changes only affect hypothetical P&L projections.
+
+The panel exposes its report via a service-role-only `public.gerball_paper_settlement_health()` function and a read-only, publishable-key-gated Edge Function. It includes the last successful reconciliation run, last football-data.co.uk import, counts of appended revisions, and up to 40 past-due fixtures with their review reason. A match becomes eligible for reconciliation three hours after kickoff; a pending record older than 48 hours is additionally flagged for investigation. Results still depend on the configured football-data.co.uk import cadence, so an elapsed match does not imply immediately available final scores.

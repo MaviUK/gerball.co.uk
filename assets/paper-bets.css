@@ -48,3 +48,11 @@
 #paperBets .pb-breakdown .pb-table-wrap table{min-width:880px}
 #paperBets .pb-breakdown .pb-table-wrap th,#paperBets .pb-breakdown .pb-table-wrap td{font-variant-numeric:tabular-nums}
 @media(max-width:600px){#paperBets .pb-breakdown-controls{gap:8px}#paperBets .pb-breakdown-controls select{max-width:160px}}
+
+#paperBets .pb-health{margin-top:20px}
+#paperBets .pb-health-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+#paperBets .pb-health-tile{background:#0f2033;border:1px solid #30465e;border-radius:10px;padding:13px}
+#paperBets .pb-health-tile small{color:#b2c3d4;display:block;font-size:12px;min-height:30px}
+#paperBets .pb-health-tile strong{font-size:23px;color:#70d7ac;font-variant-numeric:tabular-nums}
+#paperBets .pb-health .pb-table-wrap table{min-width:900px}
+@media(max-width:760px){#paperBets .pb-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#paperBets .pb-health-tile{padding:10px}}
