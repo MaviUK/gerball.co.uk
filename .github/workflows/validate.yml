@@ -39,6 +39,8 @@ jobs:
         run: node --test scripts/check-data-status-endpoint.mjs scripts/check-data-status-ui.mjs scripts/check-data-status-bridge.mjs
       - name: Verify deployed data status and server-only database access
         run: node scripts/check-live-data-status.mjs
+      - name: Verify surebet stake allocation, market completeness and live feed
+        run: node scripts/check-live-surebets.cjs
       - name: Verify extended bookmaker markets, provider costs and authentication
         run: node scripts/check-live-extra-markets.mjs
       - name: Verify paper recommendations, unit staking and P&L ledger
