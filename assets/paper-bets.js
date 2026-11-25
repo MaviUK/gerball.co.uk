@@ -86,6 +86,7 @@ function drawLedger(){
  const result=filtered?searchResult:current;
  const entries=result?.records||[];
  const count=result?.total_records??0;
+ downloadButton.textContent=filtered?'Export matching bets (CSV)':'Export all paper bets (CSV)';
  ledgerStatus.textContent=filtered
  ? searchResult?count+' matching saved paper bets for “'+searchQuery+'”. Complete ledger: '+current.total_records+' records.':'Searching the complete saved ledger…'
  : (current.total_records||0)+' total saved paper bets. '+(current.last_capture?'Last capture '+current.last_capture.date+' ('+current.last_capture.saved+' bets).':'First capture scheduled after the daily odds and rule recordings.')+' These are not actual wagers.';
@@ -144,7 +145,7 @@ function updateSearch(){
  searchQuery=next;searchResult=null;page=0;clearSearch.disabled=!next;
  if(searchTimer)clearTimeout(searchTimer);
  if(searchController)searchController.abort();searchCounter++;
- if(current){drawCandidates();drawLedger();if(next)searchTimer=setTimeout(()=>searchLedger(0),220)}
+ if(current){drawCandidates();drawLedger();if(next)searchTimer=setTimeout(()=>searchLedger(0),220);else load(0)}
 }
 searchInput.addEventListener('input',updateSearch);
 clearSearch.addEventListener('click',()=>{searchInput.value='';updateSearch();searchInput.focus()});
