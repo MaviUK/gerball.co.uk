@@ -39,5 +39,7 @@ jobs:
         run: node --test scripts/check-data-status-endpoint.mjs scripts/check-data-status-ui.mjs scripts/check-data-status-bridge.mjs
       - name: Verify deployed data status and server-only database access
         run: node scripts/check-live-data-status.mjs
+      - name: Verify paper recommendations, unit staking and P&L ledger
+        run: node scripts/check-live-paper-bets.mjs
       - name: Reconcile live historical league-market benchmarks
         run: node scripts/check-live-benchmarks.cjs
