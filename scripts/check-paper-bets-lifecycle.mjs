@@ -64,7 +64,8 @@ function report(now, fixtures = [fixture()], overrides = {}) {
 
 function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true) {
   let now = Date.parse(initial), timerId = 0;
-  const timers = new Map(), windowEvents = new Map(), documentEvents = new Map(), calls = [];
+  const timers = new Map(), windowEvents = new Map(), documentEvents = new Map(), calls = [], scopedCalls = [];
+  let lastReport = null;
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const document = { hidden: false, visibilityState: 'visible', activeElement: null };
   document.createElement = tag => new Element(tag, document);
@@ -79,17 +80,34 @@ function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true) {
     setTimeout: (fn, delay) => schedule(fn, delay), clearTimeout: id => timers.delete(id),
     setInterval: (fn, delay) => schedule(fn, delay, delay), clearInterval: id => timers.delete(id),
     addEventListener(name, fn) { if (!windowEvents.has(name)) windowEvents.set(name, []); windowEvents.get(name).push(fn); },
-    fetch(url, options = {}) { const call = { url: new URL(url), options }; calls.push(call); return fetchImpl(call, api); },
+    fetch(url, options = {}) {
+      const call = { url: new URL(url), options };
+      if (call.url.searchParams.get('scope') === 'today') {
+        scopedCalls.push(call);
+        const query = (call.url.searchParams.get('q') || '').trim().toLowerCase();
+        const records = (lastReport?.records || []).filter(b => dates.day(b.kickoff_at) === dates.day(now)).filter(b =>
+          !query || [b.home,b.away,b.market,b.bookmaker,b.status,b.fixture_date,b.event_id].some(x=>String(x??'').toLowerCase().includes(query)));
+        const offset = Number(call.url.searchParams.get('offset') || 0);
+        const limit = Number(call.url.searchParams.get('limit') || 250);
+        return Promise.resolve(Response.json({ version:'paper_today_v1',query,date:dates.day(now),total_records:records.length,records:records.slice(offset,offset+limit) }));
+      }
+      calls.push(call);
+      return Promise.resolve(fetchImpl(call, api)).then(async response => {
+        if (call.url.searchParams.get('q') === null && response?.ok) lastReport = await response.clone().json();
+        return response;
+      });
+    },
   });
   context.window = context;
   const emit = (map, name, detail) => { for (const fn of map.get(name) || []) fn({ detail }); };
   const api = {
-    calls, context, document, view, holder, timers, now: () => now,
+    calls, scopedCalls, context, document, view, holder, timers, now: () => now,
     find: className => holder.querySelectorAll('.' + className),
     cards: () => holder.querySelectorAll('.pb-match'),
     button: text => holder.querySelectorAll('button').find(button => button.textContent === text),
     search: () => document.getElementById('pb-search'),
     selector: () => holder.querySelectorAll('select')[0],
+    scope: () => document.getElementById('pb-ledger-scope'),
     async activate() { view.hidden = false; emit(windowEvents, 'gerball:viewchange', { view: 'picks' }); await flush(); },
     leave() { view.hidden = true; emit(windowEvents, 'gerball:viewchange', { view: 'overview' }); },
     async visibility(hidden) { document.hidden = hidden; document.visibilityState = hidden ? 'hidden' : 'visible'; emit(documentEvents, 'visibilitychange'); await flush(); },
@@ -143,6 +161,9 @@ test('loads only when activated, coalesces activation, and filters cached starte
   pending.resolve(Response.json(report(ui.now(), [fixture('started', { kickoff_at: '2026-11-25T12:59:00Z' }), fixture('later'), fixture('tomorrow', { kickoff_at: '2026-11-26T12:00:00Z' })])));
   await flush();
   assert.equal(ui.cards().length, 1); assert.match(ui.cards()[0].textContent, /Home later/);
+  assert.match(ui.find('pb-ledger')[0].textContent, /today/i);
+  assert.equal(ui.scopedCalls.length,1,'Default ledger fetches only today's UK fixtures');
+  ui.scope().value='history';await ui.scope().dispatch('change');await flush();
   assert.match(ui.find('pb-ledger')[0].textContent, /history/);
 });
 
@@ -165,7 +186,7 @@ test('UK midnight prunes yesterday even offline and retains the saved ledger in 
     assert.equal(ui.cards().length, 0); assert.equal(ui.calls.length, 2, 'New UK day should request its stored report');
     assert.match(ui.find('pb-status')[0].textContent, /offline|unavailable|failed/i);
     assert.match(ui.find('pb-status')[0].textContent, /previous|saved|cached|last/i);
-    assert.match(ui.find('pb-ledger')[0].textContent, /history/);
+    assert.match(ui.find('pb-ledger')[0].textContent, /today/i);
   }
 });
 
@@ -176,6 +197,7 @@ test('refreshes after five minutes only while visible, preserving filters, searc
     return Promise.resolve(Response.json(report(state.now(), [fixture('later'), fixture('excluded', { decision: 'no_estimated_edge', units: 0 })], { total_records: 501, records: [record('full-page-' + offset)] })));
   });
   await flush();
+  ui.scope().value='history'; await ui.scope().dispatch('change'); await flush();
   ui.selector().value = 'candidate'; await ui.selector().dispatch('change');
   ui.search().value = 'home'; await ui.search().dispatch('input'); await ui.advance(250);
   await ui.button('Next page').dispatch('click'); await flush();
@@ -197,7 +219,7 @@ test('automatic refresh preserves unfiltered ledger pagination and Clear returns
     if (query !== null) return Promise.resolve(Response.json({ version: 'paper_search_v1', query, total_records: 501, records: [record('search-page-' + offset)] }));
     return Promise.resolve(Response.json(report(state.now(), [fixture()], { total_records: 501, records: [record('full-page-' + offset)] })));
   });
-  await flush(); await ui.button('Next page').dispatch('click'); await flush();
+  await flush(); ui.scope().value='history'; await ui.scope().dispatch('change'); await flush(); await ui.button('Next page').dispatch('click'); await flush();
   assert.match(ui.find('pb-ledger')[0].textContent, /full-page-250/);
   await ui.advance(5 * 60000 + 30000); assert.match(ui.find('pb-ledger')[0].textContent, /full-page-250/);
   ui.search().value = 'home'; await ui.search().dispatch('input'); await ui.advance(250);
@@ -236,7 +258,7 @@ test('an ignored aborted search cannot replace the current query or restart hidd
     if (query !== null) return Promise.resolve(Response.json({ version: 'paper_search_v1', query, total_records: 1, records: [record('second-match')] }));
     return Promise.resolve(Response.json(report(state.now())));
   });
-  await flush(); ui.search().value = 'first'; await ui.search().dispatch('input'); await ui.advance(250);
+  await flush(); ui.scope().value='history'; await ui.scope().dispatch('change'); await flush(); ui.search().value = 'first'; await ui.search().dispatch('input'); await ui.advance(250);
   const searchCall = ui.calls.find(call => call.url.searchParams.get('q') === 'first');
   ui.leave(); assert.equal(searchCall.options.signal.aborted, true);
   await ui.activate(); ui.search().value = 'second'; await ui.search().dispatch('input'); await ui.advance(250);
