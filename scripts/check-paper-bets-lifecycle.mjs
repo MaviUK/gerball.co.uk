@@ -280,3 +280,40 @@ test('quote-age messaging changes independently of frozen decisions, units and P
   assert.equal(saved.decision, 'candidate'); assert.equal(saved.units, 3);
   assert.equal(ui.find('pb-dashboard')[0].textContent, metrics);
 });
+
+test('saved odds freshness distinguishes recent, aging, stale and invalid provider timestamps',()=>{
+ const now=new Date('2026-11-25T13:00:00Z'),f=fixture('price');
+ const recent=dates.priceState(fixture('new',{recorded_at:'2026-11-25T12:57:00Z',quote_collected_at:'2026-11-25T12:55:00Z',quote_updated_at:'2026-11-25T12:54:00Z'}),now);
+ assert.equal(recent.status,'recent');
+ assert.match(recent.detail,/verify/i);
+ assert.equal(dates.priceState(f,now).status,'aging');
+ assert.equal(dates.priceState(fixture('old',{recorded_at:'2026-11-25T12:00:00Z',quote_collected_at:'2026-11-25T10:00:00Z',quote_updated_at:'2026-11-25T09:59:00Z'}),now).status,'old');
+ assert.equal(dates.priceState(fixture('inconsistent',{quote_updated_at:'2026-11-25T12:10:00Z'}),now).status,'unverified');
+ assert.equal(dates.priceState(fixture('missing',{quoted_odds:null}),now).status,'unavailable');
+ assert.equal(dates.priceState(fixture('providerStale',{recorded_at:'2026-11-25T12:58:00Z',quote_collected_at:'2026-11-25T12:57:00Z',quote_updated_at:'2026-11-25T10:57:00Z'}),now).status,'old');
+ assert.equal(dates.priceState(fixture('exact15',{recorded_at:'2026-11-25T12:46:00Z',quote_collected_at:'2026-11-25T12:45:00Z',quote_updated_at:'2026-11-25T12:45:00Z'}),now).status,'recent');
+ assert.equal(dates.priceState(fixture('after15',{recorded_at:'2026-11-25T12:46:00Z',quote_collected_at:'2026-11-25T12:44:59Z',quote_updated_at:'2026-11-25T12:44:59Z'}),now).status,'aging');
+});
+
+test('freshness filter never changes saved recommendations, P&L or paper ledger',async()=>{
+ const recent=fixture('recent',{recorded_at:'2026-11-25T12:56:00Z',quote_collected_at:'2026-11-25T12:55:00Z',quote_updated_at:'2026-11-25T12:54:00Z'});
+ const aging=fixture('aging');
+ const old=fixture('old',{recorded_at:'2026-11-25T11:45:00Z',quote_collected_at:'2026-11-25T10:30:00Z',quote_updated_at:'2026-11-25T10:29:00Z'});
+ const ui=app((call,state)=>Promise.resolve(Response.json(report(state.now(),[recent,aging,old]))));
+ await flush();
+ const score=ui.find('pb-dashboard')[0].textContent, ledger=ui.find('pb-ledger')[0].textContent;
+ assert.equal(ui.cards().length,3);
+ assert.match(ui.find('pb-match')[0].textContent,/Recent saved quote/);
+ const control=ui.holder.querySelectorAll('select')[1];
+ assert(control&&control.attributes.get('aria-label')==='Show price freshness');
+ control.value='recent';await control.dispatch('change');
+ assert.equal(ui.cards().length,1);assert.match(ui.cards()[0].textContent,/Home recent/);
+ control.value='aging';await control.dispatch('change');
+ assert.equal(ui.cards().length,1);assert.match(ui.cards()[0].textContent,/Home aging/);
+ control.value='old';await control.dispatch('change');
+ assert.equal(ui.cards().length,1);assert.match(ui.cards()[0].textContent,/Home old/);
+ control.value='all';await control.dispatch('change');
+ assert.equal(ui.cards().length,3);
+ assert.equal(ui.find('pb-dashboard')[0].textContent,score);
+ assert.equal(ui.find('pb-ledger')[0].textContent,ledger);
+});

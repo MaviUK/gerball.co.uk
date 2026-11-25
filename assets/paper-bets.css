@@ -60,3 +60,8 @@
 #paperBets .pb-ledger-scope{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}
 #paperBets .pb-ledger-scope label{font-size:13px;font-weight:650;color:#d6e5f7}
 #paperBets .pb-ledger-scope select{width:auto;min-width:155px;min-height:40px}
+
+#paperBets .pb-match .pb-tags .pb-price-recent{background:#164533;color:#a5efd0}
+#paperBets .pb-match .pb-tags .pb-price-aging{background:#483c21;color:#f4d99b}
+#paperBets .pb-match .pb-tags .pb-price-old,#paperBets .pb-match .pb-tags .pb-price-unverified,#paperBets .pb-match .pb-tags .pb-price-unavailable{background:#53303a;color:#ffbfc7}
+#paperBets .pb-match .pb-caption{overflow-wrap:anywhere}

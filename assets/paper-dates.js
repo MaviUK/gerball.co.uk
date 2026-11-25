@@ -26,5 +26,26 @@ function nextChangeAt(fixtures,now=new Date()){
  for(const fixture of upcomingToday(fixtures,now))next=Math.min(next,Date.parse(fixture.kickoff_at));
  return next;
 }
-return{day,isToday,todayOnly,upcomingToday,nextChangeAt};
+// Price observations are research snapshots. "recent" is not bookmaker-executable.
+function priceState(fixture,now=new Date()){
+ const clock=Number(new Date(now).getTime());
+ const odds=Number(fixture?.quoted_odds);
+ if(!Number.isFinite(odds)||odds<=1)return{status:'unavailable',label:'Price unavailable',detail:'No valid bookmaker price was saved for this assessment.',captureMinutes:null,providerMinutes:null};
+ const captured=Date.parse(fixture?.quote_collected_at??'');
+ const source=Date.parse(fixture?.quote_updated_at??'');
+ const recorded=Date.parse(fixture?.recorded_at??'');
+ const kickoff=Date.parse(fixture?.kickoff_at??'');
+ if(![clock,captured,source,recorded,kickoff].every(Number.isFinite)||
+ captured>clock||source>clock||source>captured||recorded>clock||recorded>kickoff||
+ captured>recorded||captured>=kickoff)
+ return{status:'unverified',label:'Unverified price time',detail:'Snapshot timestamps are missing or inconsistent; do not treat this price as available.',captureMinutes:null,providerMinutes:null};
+ const capturedAge=(clock-captured)/60000,providerAge=(clock-source)/60000;
+ const captureMinutes=Math.floor(capturedAge),providerMinutes=Math.floor(providerAge);
+ if(capturedAge<=15&&providerAge<=15)
+ return{status:'recent',label:'Recent saved quote',detail:'Captured and provider-updated within 15 minutes. Still verify the bookmaker price and stake limit.',captureMinutes,providerMinutes};
+ if(capturedAge<=120&&providerAge<=120)
+ return{status:'aging',label:'Aging saved quote',detail:'Saved price is older than 15 minutes; verify current odds before considering any stake.',captureMinutes,providerMinutes};
+ return{status:'old',label:'Old saved quote',detail:'Price is older than 2 hours or provider-updated too long ago; research only, not a usable quote.',captureMinutes,providerMinutes};
+}
+return{day,isToday,todayOnly,upcomingToday,nextChangeAt,priceState};
 });

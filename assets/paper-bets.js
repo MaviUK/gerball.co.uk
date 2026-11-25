@@ -2,7 +2,7 @@
 const holder=root.document.getElementById('paperBets');
 const view=root.document.getElementById('view-picks');
 const dates=root.GerballPaperDates;
-if(!dates||typeof dates.upcomingToday!=='function')return;
+if(!dates||typeof dates.upcomingToday!=='function'||typeof dates.priceState!=='function')return;
 if(!holder||!view)return;
 const marketNames={H:'Home win',D:'Draw',A:'Away win',O25:'Over 2.5 goals',U25:'Under 2.5 goals'};
 const reasonNames={candidate:'Model candidate',team_not_linked:'Team names not linked',insufficient_league_history:'Not enough league history',insufficient_venue_history:'Not enough comparable home/away games',no_captured_odds:'No recorded price',price_out_of_scope:'Odds outside selected range',stale_collection:'Captured odds too old',stale_provider_quote:'Bookmaker quote too old',no_estimated_edge:'No sufficient estimated edge'};
@@ -14,7 +14,7 @@ const fnum=(x,n=2)=>x!==null&&x!==undefined&&Number.isFinite(Number(x))?Number(x
 const cell=(value)=>{const s=value===null||value===undefined?'':String(value);const safe=/^\s*[=+@\-]/.test(s)&&!/^-[0-9]+(\.[0-9]+)?$/.test(s)?"'"+s:s;return '"'+safe.replace(/"/g,'""')+'"'};
 const recordsCSV=rows=>{const cols=['id','model_version','league','home','away','kickoff_at','recorded_at','market','odds','bookmaker','quote_collected_at','model_probability','estimated_edge','units','status','revision','home_goals','away_goals','result','won','net_units','input'];return '\uFEFF'+[cols,...rows.map(row=>cols.map(c=>c==='input'?JSON.stringify(row.input):row[c]??''))].map(r=>r.map(cell).join(',')).join('\r\n')};
 const download=(content,filename)=>{const b=new Blob([content],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=$('a');a.href=u;a.download=filename;root.document.body.append(a);a.click();a.remove();root.setTimeout(()=>URL.revokeObjectURL(u),1500)};
-let active=false,loading=false,current=null,filter='all',exporting=false,ledgerScope='today';
+let active=false,loading=false,current=null,filter='all',priceFilter='all',exporting=false,ledgerScope='today';
 let searchQuery='',searchResult=null,searchCounter=0,searchTimer=null,searchController=null;
 let reportCounter=0,reportController=null,activityTimer=null,lastLoadedAt=null,lastAttemptAt=null,lastAttemptDay=null;
 let reportInterrupted=false,searchInterrupted=false,requestedPage=0,refreshError=null;
@@ -40,7 +40,12 @@ const summaryBox=$('div',undefined,'pb-dashboard');intro.append(summaryBox);
 const candidateSection=$('section',undefined,'card'),candidateTop=$('div',undefined,'pb-top');
 candidateTop.append($('h2',"Today's match assessments"));
 const selector=$('select');selector.setAttribute('aria-label','Show assessments');for(const [value,label] of [['all','All matches'],['candidate','Model candidates'],['no','No bet']]){const o=$('option',label);o.value=value;selector.append(o)}
-candidateTop.append(selector);candidateSection.append(candidateTop);
+candidateTop.append(selector);
+const priceSelector=$('select');priceSelector.setAttribute('aria-label','Show price freshness');
+for(const [value,label] of [['all','All price ages'],['recent','Recent quotes (15m)'],['aging','Aging saved prices'],['old','Old / unverified']]){
+ const option=$('option',label);option.value=value;priceSelector.append(option);
+}
+candidateTop.append(priceSelector);candidateSection.append(candidateTop);
 const candidateStatus=$('p','','pb-caption');const cards=$('div',undefined,'pb-list');
 candidateSection.append(candidateStatus,cards);
 const ledger=$('section',undefined,'card pb-ledger');const ledgerTop=$('div',undefined,'pb-top');const ledgerTitle=$('h2',"Today's paper bets");ledgerTop.append(ledgerTitle);
@@ -62,17 +67,21 @@ function drawMetrics(){
  }
 }
 function quoteAge(p,now){
- const captured=Date.parse(p.quote_collected_at),age=now.getTime()-captured;
- if(!Number.isFinite(captured))return 'Capture time unavailable';
- if(age<0)return 'Capture time is ahead of this device’s clock';
- const minutes=Math.floor(age/60000),hours=Math.floor(minutes/60);
- return 'Captured '+(hours?hours+'h ':'')+(minutes%60)+'m ago'+(age>120*60000?' · older than 2 hours; saved assessment':' · saved assessment');
+ const state=dates.priceState(p,now);
+ if(state.captureMinutes===null)return state.detail;
+ const captured=state.captureMinutes,provider=state.providerMinutes;
+ const elapsed=minutes=>minutes>=60?Math.floor(minutes/60)+'h '+(minutes%60)+'m':minutes+'m';
+ return 'Captured '+elapsed(captured)+' ago · Bookmaker last updated '+elapsed(provider)+' ago · '+state.detail+
+  (state.status==='old'?' Price older than 2 hours; saved assessment.':'');
 }
 function matchCard(p,now){
  const box=$('article',undefined,'pb-match'),h=$('h3',(p.home||'?')+' v '+(p.away||'?'));box.append(h);
  box.append($('p',p.league+' · '+textDate(p.kickoff_at),'pb-caption'));
  const tags=$('div',undefined,'pb-tags');const yes=p.decision==='candidate';
- tags.append($('span',yes?'PAPER '+p.units+' '+(p.units===1?'unit':'units'):'NO BET',yes?'pb-yes':'pb-no'));tags.append($('span',marketNames[p.market]||p.market));
+ const freshness=dates.priceState(p,now);
+ tags.append($('span',yes?'PAPER '+p.units+' '+(p.units===1?'unit':'units'):'NO BET',yes?'pb-yes':'pb-no'));
+ tags.append($('span',marketNames[p.market]||p.market));
+ tags.append($('span',freshness.label,'pb-price-'+freshness.status));
  box.append(tags);
  const dl=$('dl');for(const [name,value] of [
  ['Captured odds',p.quoted_odds?fnum(p.quoted_odds):'Unavailable'],
@@ -91,8 +100,16 @@ function drawCandidates(now=new Date()){
  const total=source.length;
  if(filter==='candidate')source=source.filter(p=>p.decision==='candidate');
  if(filter==='no')source=source.filter(p=>p.decision!=='candidate');
+ const counts={recent:0,aging:0,old:0,unverified:0,unavailable:0};
+ for(const p of source)counts[dates.priceState(p,now).status]++;
+ if(priceFilter!=='all')source=source.filter(p=>{
+  const age=dates.priceState(p,now).status;
+  return priceFilter==='old'?['old','unverified','unavailable'].includes(age):age===priceFilter;
+ });
  if(searchQuery)source=source.filter(p=>matchesQuery(p,searchQuery));
- candidateStatus.textContent=source.length+' of '+total+' fixtures still to kick off today ('+dates.day(now)+' UK)'+(searchQuery?' for “'+searchQuery+'”':'')+'. Each fixture has at most one saved market assessment; excluded fixtures still show why.';
+ candidateStatus.textContent=source.length+' of '+total+' fixtures still to kick off today ('+dates.day(now)+' UK)'+
+ (searchQuery?' for “'+searchQuery+'”':'')+
+ '. Saved quote ages: '+counts.recent+' recent, '+counts.aging+' aging, '+(counts.old+counts.unverified+counts.unavailable)+' old/unverified. Prices are snapshots, not guaranteed executable odds.';
  if(!source.length){cards.append($('p',total?'No remaining matches today meet this filter.':'No fixtures still to kick off today in the latest captured assessments. The full paper-bet record remains available below.','pb-caption'));return}
  for(const p of source.slice(0,72))cards.append(matchCard(p,now));
  if(source.length>72)cards.append($('p','Showing 72 of '+source.length+' matching fixtures.','pb-caption'));
@@ -224,6 +241,7 @@ async function load(num=0,{automatic=false}={}){
 }
 refresh.addEventListener('click',()=>load(0));
 selector.addEventListener('change',()=>{filter=selector.value;if(current)drawCandidates()});
+priceSelector.addEventListener('change',()=>{priceFilter=priceSelector.value;if(current)drawCandidates()});
 function updateSearch(){
  const next=normalizeQuery(searchInput.value);if(next===searchQuery)return;
  searchQuery=next;searchResult=null;page=0;clearSearch.disabled=!next;
