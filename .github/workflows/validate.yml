@@ -45,6 +45,8 @@ jobs:
         run: node scripts/check-live-extra-markets.mjs
       - name: Verify paper bet clock changes, visibility, refresh and request races
         run: node --test scripts/check-paper-bets-lifecycle.mjs
+      - name: Verify isolated today-first bookmaker price comparisons
+        run: node scripts/check-live-paper-refreshed-prices.mjs
       - name: Verify paper recommendations, unit staking and P&L ledger
         run: node scripts/check-live-paper-bets.mjs
       - name: Reconcile live historical league-market benchmarks

@@ -1,0 +1,56 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const helpers=require('../assets/paper-price-helpers.js');
+const now=new Date('2026-11-25T19:20:00Z'),kickoff='2026-11-25T20:00:00Z';
+const sample={version:'paper_price_refresh_v1',prices:[{event_id:'a',kickoff_at:kickoff,selection:'H',
+ bookmaker:'Example Bookmaker',bookmaker_key:'demo',odds:2.4,
+ quote_collected_at:'2026-11-25T19:17:00Z',quote_updated_at:'2026-11-25T19:16:00Z'}]};
+const price=helpers.currentQuote(sample,'a','H',kickoff,now);
+assert(price&&price.fresh&&price.odds===2.4);
+assert.equal(helpers.currentQuote(sample,'a','A',kickoff,now),null,'Different outcomes cannot be substituted');
+assert.equal(helpers.currentQuote(sample,'b','H',kickoff,now),null,'Different fixtures cannot be substituted');
+assert.equal(helpers.currentQuote(sample,'a','H','2026-11-25T21:00:00Z',now),null,'Kickoff identity required');
+assert.equal(helpers.currentQuote(sample,'a','H',kickoff,new Date('2026-11-25T20:00:00Z')),null,'Started fixtures forbidden');
+assert.equal(helpers.currentQuote(sample,'a','H',kickoff,new Date('2026-11-25T19:35:00Z')).fresh,false,'Stored quotes age out');
+assert.equal(helpers.currentQuote({...sample,prices:[{...sample.prices[0],bookmaker_key:'betfair_ex_uk'}]},'a','H',kickoff,now),null,'Exchange commission not modeled');
+assert.equal(helpers.currentQuote({...sample,prices:[{...sample.prices[0],quote_updated_at:'2026-11-25T19:19:00Z'}]},'a','H',kickoff,now),null,'Update after capture invalid');
+const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const js=fs.readFileSync(new URL('../assets/paper-bets.js',import.meta.url),'utf8');
+const screen=fs.readFileSync(new URL('../assets/paper-refreshed-prices.js',import.meta.url),'utf8');
+const sql=fs.readFileSync(new URL('../supabase/paper-refreshed-prices-source.sql',import.meta.url),'utf8');
+const picker=fs.readFileSync(new URL('../supabase/surebet-today-selector.sql',import.meta.url),'utf8');
+assert(html.includes('assets/paper-price-helpers.js')&&html.includes('assets/paper-refreshed-prices.js'));
+assert(js.includes('GerballPaperPriceComparison?.get'),'Original paper cards must show separate captured quotes');
+assert(screen.includes('Update captured comparisons')&&screen.includes('gerball:paper-refreshed-prices'));
+assert(sql.includes("DISTINCT ON (r.event_id)")&&sql.includes("q.source_updated_at<=q.collected_at"),'Snapshots must be aligned to same run');
+assert(picker.includes("paper_rank")&&picker.includes("today_rank")&&picker.includes("7 minutes"),'Collector must select upcoming today-first paper fixtures');
+const cloud=html.match(/const CLOUD_URL='([^']+)'/)?.[1],key=html.match(/const CLOUD_KEY='([^']+)'/)?.[1];
+assert(cloud&&key);
+const endpoint=cloud+'/functions/v1/gerball-paper-refreshed-prices';
+const noKey=await fetch(endpoint,{signal:AbortSignal.timeout(15000)});
+assert.equal(noKey.status,401);
+const noWrite=await fetch(endpoint,{method:'POST',headers:{apikey:key},signal:AbortSignal.timeout(15000)});
+assert.equal(noWrite.status,405);
+const response=await fetch(endpoint,{headers:{apikey:key},signal:AbortSignal.timeout(25000)});
+assert.equal(response.status,200,'Read-only price comparisons must be operational');
+const data=await response.json();
+assert.equal(data.version,'paper_price_refresh_v1');
+assert(Array.isArray(data.prices)&&data.prices.length===data.total_prices);
+assert(data.events_with_refresh<=data.total_eligible_events);
+const currentUK=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'});
+const day=d=>{const p=Object.fromEntries(currentUK.formatToParts(new Date(d)).map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
+assert.equal(data.uk_date,day(data.generated_at));
+const seen=new Set();
+for(const q of data.prices){
+ assert(['H','D','A'].includes(q.selection));
+ assert(Number(q.odds)>1&&Number(q.odds)<=1000);
+ assert(!['betfair_ex_uk','smarkets','matchbook'].includes(q.bookmaker_key));
+ assert(Date.parse(q.quote_updated_at)<=Date.parse(q.quote_collected_at));
+ assert(Date.parse(q.quote_collected_at)<Date.parse(q.kickoff_at));
+ assert(Date.parse(q.quote_collected_at)-Date.parse(q.quote_updated_at)<=15*60000);
+ assert.equal(day(q.kickoff_at),data.uk_date);
+ const id=q.event_id+'|'+q.selection;assert(!seen.has(id),'One best price per event outcome');seen.add(id);
+}
+console.log('Today paper prices validated:',data.total_eligible_events,'fixtures,',data.events_with_refresh,'sampled,',data.total_prices,'prices');

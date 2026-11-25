@@ -91,6 +91,15 @@ function matchCard(p,now){
  ['Home / away samples',(p.home_sample??0)+' / '+(p.away_sample??0)],
  ['Decision',reasonNames[p.decision]||p.decision]]){dl.append($('dt',name),$('dd',value))}
  box.append(dl,$('p',quoteAge(p,now),'pb-caption'));
+ if(['H','D','A'].includes(p.market)){
+  const updated=root.GerballPaperPriceComparison?.get(p.event_id,p.market,p.kickoff_at,now);
+  const detail=updated
+   ? 'Intraday fixed-odds comparison: '+fnum(updated.odds)+' ('+updated.bookmaker+') · '+
+     (updated.fresh?'recent saved quote':'older saved quote')+
+     ', captured '+updated.ageMinutes+'m ago. Original '+fnum(p.quoted_odds)+' price and paper units remain unchanged.'
+   : 'No matching intraday fixed-odds quote yet; only the original saved assessment is available.';
+  box.append($('p',detail,'pb-intraday-note'));
+ }else box.append($('p','Intraday refreshed prices currently cover 1X2 only; this market has no updated comparison.','pb-intraday-note'));
  box.append($('small','Saved form: '+textDate(p.recorded_at)+' · Price captured: '+textDate(p.quote_collected_at)));
  return box;
 }
@@ -273,6 +282,7 @@ downloadButton.addEventListener('click',async()=>{
  download(recordsCSV(rows),'gerball-paper-bets-'+(scope==='today'?'today-':query?'search-':'history-')+new Date().toISOString().slice(0,10)+'.csv');
  }catch(error){status.textContent=error.message}finally{exporting=false;busyButtons()}
 });
+root.addEventListener('gerball:paper-refreshed-prices',()=>{if(current&&visible())drawCandidates(new Date())});
 root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible())checkActivity();else pauseActivity()});
 root.document.addEventListener('visibilitychange',()=>{if(visible())checkActivity();else pauseActivity()});
 root.addEventListener('focus',()=>{if(visible())checkActivity()});

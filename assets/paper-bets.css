@@ -65,3 +65,9 @@
 #paperBets .pb-match .pb-tags .pb-price-aging{background:#483c21;color:#f4d99b}
 #paperBets .pb-match .pb-tags .pb-price-old,#paperBets .pb-match .pb-tags .pb-price-unverified,#paperBets .pb-match .pb-tags .pb-price-unavailable{background:#53303a;color:#ffbfc7}
 #paperBets .pb-match .pb-caption{overflow-wrap:anywhere}
+
+#paperBets .pb-intraday-note{color:#b1dfec;font-size:12px;border-top:1px solid #30475a;padding-top:9px;margin-top:8px}
+#paperBets .pb-live-prices{border:1px solid #375872;border-radius:10px;padding:15px;margin:12px 0 16px;background:#12243a}
+#paperBets .pb-price-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+#paperBets .pb-price-head button{width:auto}
+#paperBets .pb-live-prices .pb-table-wrap table{min-width:720px}
