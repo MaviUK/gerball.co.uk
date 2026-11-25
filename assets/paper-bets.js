@@ -14,7 +14,7 @@ const fnum=(x,n=2)=>x!==null&&x!==undefined&&Number.isFinite(Number(x))?Number(x
 const cell=(value)=>{const s=value===null||value===undefined?'':String(value);const safe=/^\s*[=+@\-]/.test(s)&&!/^-[0-9]+(\.[0-9]+)?$/.test(s)?"'"+s:s;return '"'+safe.replace(/"/g,'""')+'"'};
 const recordsCSV=rows=>{const cols=['id','model_version','league','home','away','kickoff_at','recorded_at','market','odds','bookmaker','quote_collected_at','model_probability','estimated_edge','units','status','revision','home_goals','away_goals','result','won','net_units','input'];return '\uFEFF'+[cols,...rows.map(row=>cols.map(c=>c==='input'?JSON.stringify(row.input):row[c]??''))].map(r=>r.map(cell).join(',')).join('\r\n')};
 const download=(content,filename)=>{const b=new Blob([content],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=$('a');a.href=u;a.download=filename;root.document.body.append(a);a.click();a.remove();root.setTimeout(()=>URL.revokeObjectURL(u),1500)};
-let active=false,loading=false,current=null,filter='all',exporting=false;
+let active=false,loading=false,current=null,filter='all',exporting=false,ledgerScope='today';
 let searchQuery='',searchResult=null,searchCounter=0,searchTimer=null,searchController=null;
 let reportCounter=0,reportController=null,activityTimer=null,lastLoadedAt=null,lastAttemptAt=null,lastAttemptDay=null;
 let reportInterrupted=false,searchInterrupted=false,requestedPage=0,refreshError=null;
@@ -43,9 +43,13 @@ const selector=$('select');selector.setAttribute('aria-label','Show assessments'
 candidateTop.append(selector);candidateSection.append(candidateTop);
 const candidateStatus=$('p','','pb-caption');const cards=$('div',undefined,'pb-list');
 candidateSection.append(candidateStatus,cards);
-const ledger=$('section',undefined,'card pb-ledger');const ledgerTop=$('div',undefined,'pb-top');ledgerTop.append($('h2','Complete paper record'));
+const ledger=$('section',undefined,'card pb-ledger');const ledgerTop=$('div',undefined,'pb-top');const ledgerTitle=$('h2',"Today's paper bets");ledgerTop.append(ledgerTitle);
+const scopeLabel=$('label','Bet history');scopeLabel.htmlFor='pb-ledger-scope';
+const scopeSelect=$('select');scopeSelect.id='pb-ledger-scope';scopeSelect.setAttribute('aria-label','Date range for saved paper bets');
+for(const [value,name] of [['today',"Today's bets"],['history','Complete history']]){const option=$('option',name);option.value=value;scopeSelect.append(option)}
+const scopePanel=$('div',undefined,'pb-ledger-scope');scopePanel.append(scopeLabel,scopeSelect);
 const downloadButton=$('button','Export all paper bets (CSV)','secondary');downloadButton.type='button';ledgerTop.append(downloadButton);
-ledger.append(ledgerTop,$('p','Each record saves the original odds, recommended units, model estimate and input snapshot. Imported score revisions update the displayed return without changing the original bet.','pb-caption'));
+ledger.append(ledgerTop,scopePanel,$('p','Today’s bets are grouped by UK kickoff date. Switch to Complete history to browse all saved paper bets. Lifetime P&L is always unfiltered.','pb-caption'));
 const ledgerStatus=$('p','','pb-caption');ledger.append(ledgerStatus);
 const scroll=$('div',undefined,'pb-table-wrap');ledger.append(scroll);
 const pagination=$('div',undefined,'pb-controls');const newer=$('button','Previous page','secondary'),older=$('button','Next page','secondary');newer.type=older.type='button';pagination.append(newer,older);ledger.append(pagination);
@@ -95,13 +99,15 @@ function drawCandidates(now=new Date()){
 }
 function drawLedger(){
  scroll.replaceChildren();
- const filtered=searchQuery!=='';
+ const filtered=ledgerScope==='today'||searchQuery!=='';
  const result=filtered?searchResult:current;
+ ledgerTitle.textContent=ledgerScope==='today'?"Today's paper bets":'Complete paper record';
  const entries=result?.records||[];
  const count=result?.total_records??0;
- downloadButton.textContent=filtered?'Export matching bets (CSV)':'Export all paper bets (CSV)';
- ledgerStatus.textContent=filtered
- ? searchResult?count+' matching saved paper bets for “'+searchQuery+'”. Complete ledger: '+current.total_records+' records.':'Searching the complete saved ledger…'
+ downloadButton.textContent=ledgerScope==='today'?'Export today’s bets (CSV)':searchQuery?'Export matching bets (CSV)':'Export all paper bets (CSV)';
+ ledgerStatus.textContent=ledgerScope==='today'
+ ? searchResult?count+' paper bets kicking off today ('+searchResult.date+' UK)'+(searchQuery?' matching “'+searchQuery+'”':'')+'.':'Loading today’s paper bets…'
+ : searchQuery?searchResult?count+' matching saved paper bets for “'+searchQuery+'”. Complete ledger: '+current.total_records+' records.':'Searching the complete saved ledger…'
  : (current.total_records||0)+' total saved paper bets. '+(current.last_capture?'Last capture '+current.last_capture.date+' ('+current.last_capture.saved+' bets).':'First capture scheduled after the daily odds and rule recordings.')+' These are not actual wagers.';
  const table=$('table');const header=$('thead'),row=$('tr');for(const name of ['Fixture','Kickoff','Market','Odds','Units','Bookmaker','Status','Result','Net units'])row.append($('th',name));header.append(row);table.append(header);
  const body=$('tbody');
@@ -114,7 +120,7 @@ function drawLedger(){
  for(const value of elements)tr.append($('td',value));
  body.append(tr);
  }
- if(!entries.length){const tr=$('tr'),td=$('td',filtered?(searchResult?'No paper bets match this search.':'Searching saved records…'):'No saved paper bets. Recommendations are recorded only when a qualified opportunity appears before kickoff.');td.colSpan=9;tr.append(td);body.append(tr)}
+ if(!entries.length){const tr=$('tr'),td=$('td',filtered?(searchResult?(ledgerScope==='today'?'No saved paper bets for today’s kickoffs'+(searchQuery?' matching this search':'')+'.':'No paper bets match this search.'):'Searching saved records…'):'No saved paper bets. Recommendations are recorded only when a qualified opportunity appears before kickoff.');td.colSpan=9;tr.append(td);body.append(tr)}
  table.append(body);scroll.append(table);
  newer.disabled=page===0||filtered&&!searchResult;older.disabled=filtered&&!searchResult||(page+1)*PAGE>=count;
 }
@@ -137,7 +143,7 @@ function cancelSearch(){
 function pauseActivity(){
  if(activityTimer!==null){root.clearTimeout(activityTimer);activityTimer=null}
  if(loading)reportInterrupted=true;
- if(searchController||searchTimer!==null)searchInterrupted=!!searchQuery;
+ if(searchController||searchTimer!==null)searchInterrupted=ledgerScope==='today'||!!searchQuery;
  reportCounter++;
  if(reportController)reportController.abort();
  reportController=null;loading=false;cancelSearch();busyButtons();
@@ -163,7 +169,7 @@ function checkActivity(){
  const now=new Date();drawCurrent(now);
  const mayAttempt=reportInterrupted||lastAttemptAt===null||lastAttemptDay!==dates.day(now)||now.getTime()-lastAttemptAt>=CLOCK_MS;
  if(!loading&&needsRefresh(now)&&mayAttempt)load(reportInterrupted?requestedPage:page,{automatic:true});
- else if(!loading&&current&&searchQuery&&searchInterrupted&&!searchController)searchLedger(page);
+ else if(!loading&&current&&(ledgerScope==='today'||searchQuery)&&searchInterrupted&&!searchController)searchLedger(page);
  scheduleActivity();
 }
 async function fetchPage(num,signal){
@@ -173,21 +179,21 @@ async function fetchPage(num,signal){
  return j;
 }
 async function searchLedger(num=0,{keepExisting=false}={}){
- if(!current||!visible()){searchInterrupted=!!searchQuery;return}
+ if(!current||!visible()){searchInterrupted=ledgerScope==='today'||!!searchQuery;return}
  if(searchTimer!==null){root.clearTimeout(searchTimer);searchTimer=null}
- const query=searchQuery,token=++searchCounter;
+ const query=searchQuery,scope=ledgerScope,token=++searchCounter;
  if(searchController)searchController.abort();
  const controller=new AbortController();searchController=controller;searchInterrupted=false;
- if(query===''){page=0;searchResult=null;searchController=null;drawLedger();return}
+ if(query===''&&scope==='history'){page=0;searchResult=null;searchController=null;drawLedger();return}
  if(!keepExisting||page!==num)searchResult=null;
  page=num;drawLedger();
  try{
-  const path='?limit='+PAGE+'&offset='+(num*PAGE)+'&q='+encodeURIComponent(query);
+  const path='?limit='+PAGE+'&offset='+(num*PAGE)+(scope==='today'?'&scope=today':'')+(query?'&q='+encodeURIComponent(query):'');
   const response=await fetch(CLOUD_URL+'/functions/v1/gerball-paper-bets'+path,{headers:{apikey:CLOUD_KEY},signal:AbortSignal.any([controller.signal,AbortSignal.timeout(30000)])});
   if(!response.ok)throw Error('Search unavailable ('+response.status+')');
   const result=await response.json();
-  if(result?.version!=='paper_search_v1'||!Array.isArray(result.records)||!Number.isInteger(result.total_records)||result.query!==query)throw Error('Invalid search results');
-  if(token!==searchCounter||searchQuery!==query||!visible())return;
+  if(result?.version!==(scope==='today'?'paper_today_v1':'paper_search_v1')||!Array.isArray(result.records)||!Number.isInteger(result.total_records)||result.query!==query)throw Error('Invalid search results');
+  if(token!==searchCounter||searchQuery!==query||ledgerScope!==scope||!visible())return;
   searchResult=result;drawLedger();
  }catch(error){
   if(token!==searchCounter||!visible()||error.name==='AbortError')return;
@@ -207,7 +213,7 @@ async function load(num=0,{automatic=false}={}){
   current=data;lastLoadedAt=Date.now();refreshError=null;
   if(searchQuery===queryAtStart&&(!searchQuery||!automatic))page=num;
   drawMetrics();drawCandidates(new Date());drawLedger();
-  if(searchQuery)await searchLedger(page,{keepExisting:automatic});
+  if(ledgerScope==='today'||searchQuery)await searchLedger(page,{keepExisting:automatic});
  }catch(error){
   if(token!==reportCounter||!visible()||error.name==='AbortError')return;
   refreshError=error.message;
@@ -222,27 +228,31 @@ function updateSearch(){
  const next=normalizeQuery(searchInput.value);if(next===searchQuery)return;
  searchQuery=next;searchResult=null;page=0;clearSearch.disabled=!next;
  cancelSearch();searchInterrupted=!!next;
- if(current){drawCandidates();drawLedger();if(next&&visible())searchTimer=root.setTimeout(()=>{searchTimer=null;searchLedger(0)},220);else if(!next)load(0)}
+ if(current){drawCandidates();drawLedger();if((next||ledgerScope==='today')&&visible())searchTimer=root.setTimeout(()=>{searchTimer=null;searchLedger(0)},220);else if(!next)load(0)}
  scheduleActivity();
 }
 searchInput.addEventListener('input',updateSearch);
 clearSearch.addEventListener('click',()=>{searchInput.value='';updateSearch();searchInput.focus()});
-newer.addEventListener('click',()=>searchQuery?searchLedger(page-1):load(page-1));
-older.addEventListener('click',()=>searchQuery?searchLedger(page+1):load(page+1));
+scopeSelect.addEventListener('change',()=>{
+ ledgerScope=scopeSelect.value;page=0;searchResult=null;cancelSearch();
+ if(current&&visible()){drawLedger();if(ledgerScope==='today'||searchQuery)searchLedger(0);else load(0)}
+});
+newer.addEventListener('click',()=>ledgerScope==='today'||searchQuery?searchLedger(page-1):load(page-1));
+older.addEventListener('click',()=>ledgerScope==='today'||searchQuery?searchLedger(page+1):load(page+1));
 downloadButton.addEventListener('click',async()=>{
  if(!current||loading||exporting)return;exporting=true;busyButtons();
  try{
- const rows=[];let offset=0;const query=searchQuery;const total=query?searchResult?.total_records:current.total_records;
+ const rows=[];let offset=0;const query=searchQuery,scope=ledgerScope;const total=scope==='today'||query?searchResult?.total_records:current.total_records;
  if(total===undefined)throw Error('Search results are still loading');
  if(total>50000)throw Error('Export exceeds the 50,000-record window');
  while(offset<total){
- const path='?limit=1000&offset='+offset+(query?'&q='+encodeURIComponent(query):'');
+ const path='?limit=1000&offset='+offset+(scope==='today'?'&scope=today':'')+(query?'&q='+encodeURIComponent(query):'');
  const response=await fetch(CLOUD_URL+'/functions/v1/gerball-paper-bets'+path,{headers:{apikey:CLOUD_KEY},signal:AbortSignal.timeout(30000)});
  if(!response.ok)throw Error('CSV export request failed');
  const report=await response.json();if(!Array.isArray(report.records)||!report.records.length)throw Error('Incomplete ledger download');
  rows.push(...report.records);offset+=report.records.length;
  }
- download(recordsCSV(rows),'gerball-paper-bets-'+(query?'search-':'')+new Date().toISOString().slice(0,10)+'.csv');
+ download(recordsCSV(rows),'gerball-paper-bets-'+(scope==='today'?'today-':query?'search-':'history-')+new Date().toISOString().slice(0,10)+'.csv');
  }catch(error){status.textContent=error.message}finally{exporting=false;busyButtons()}
 });
 root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible())checkActivity();else pauseActivity()});

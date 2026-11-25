@@ -159,3 +159,29 @@ assert(js.includes('dates.upcomingToday('),'Paper bet recommendations must filte
 assert(js.includes("Today's match assessments"),'Recommendations heading must explain date restriction');
 assert(js.includes('Complete paper record'),'Historical ledger is preserved');
 console.log('Paper bets UK-day fixtures verified, GMT/BST and historical ledger unchanged.');
+
+const ukDay=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'});
+const todayParts=Object.fromEntries(ukDay.formatToParts(new Date()).map(p=>[p.type,p.value]));
+const todayUK=todayParts.year+'-'+todayParts.month+'-'+todayParts.day;
+const todayResp=await get('?scope=today&limit=250&offset=0',{headers:{apikey:key}});
+assert.equal(todayResp.status,200,'Today ledger must be available');
+const today=await todayResp.json();
+assert.equal(today.version,'paper_today_v1');
+assert.equal(today.date,todayUK);
+assert(Array.isArray(today.records)&&Number.isInteger(today.total_records));
+for(const bet of today.records){
+ const parts=Object.fromEntries(ukDay.formatToParts(new Date(bet.kickoff_at)).map(p=>[p.type,p.value]));
+ assert.equal(parts.year+'-'+parts.month+'-'+parts.day,todayUK,'Only today UK kickoff is visible');
+}
+const todaySearch=await get('?scope=today&q=chelsea&limit=250&offset=0',{headers:{apikey:key}});
+assert.equal(todaySearch.status,200);
+const todayFiltered=await todaySearch.json();
+assert.equal(todayFiltered.version,'paper_today_v1');
+assert(todayFiltered.total_records<=today.total_records);
+assert(todayFiltered.records.every(bet=>[bet.home,bet.away,bet.league,bet.bookmaker,bet.event_id,bet.market,bet.status,bet.fixture_date].some(v=>String(v??'').toLowerCase().includes('chelsea'))));
+const invalidScope=await get('?scope=tomorrow',{headers:{apikey:key}});
+assert.equal(invalidScope.status,400,'Tomorrow or future bets must not be exposed as Today');
+assert(js.includes("ledgerScope='today'"),'Default page should show today');
+assert(js.includes("scopeSelect.addEventListener('change'"),'Complete history must remain accessible');
+assert(js.includes("scope==='today'?'&scope=today'"),'Date-scoped server paging must be used');
+console.log('Today-only paper bets verified:',today.total_records,'UK-day records; historical ledger intact');

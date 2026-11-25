@@ -4,8 +4,9 @@ Deno.serve(async request=>{
  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"apikey, content-type","Access-Control-Allow-Methods":"GET, OPTIONS"}});
  if(request.method!=="GET")return json({error:"Use GET"},405);
  const params=new URL(request.url).searchParams;
- if([...params.keys()].some(k=>!["limit","offset","q"].includes(k)||params.getAll(k).length!==1))return json({error:"Supported parameters: limit, offset"},400);
- const limit=params.get("limit")??"250",offset=params.get("offset")??"0",query=params.get("q");
+ if([...params.keys()].some(k=>!["limit","offset","q","scope"].includes(k)||params.getAll(k).length!==1))return json({error:"Supported parameters: limit, offset"},400);
+ const limit=params.get("limit")??"250",offset=params.get("offset")??"0",query=params.get("q"),scope=params.get("scope");
+ if(scope!==null&&!["today","history"].includes(scope))return json({error:"Invalid scope"},400);
  if(query!==null&&(query.length>100||/[\u0000-\u001f\u007f]/.test(query)))return json({error:"Invalid search"},400);
  if(!/^[0-9]{1,4}$/.test(limit)||+limit<1||+limit>1000||!/^[0-9]{1,5}$/.test(offset)||+offset>50000)return json({error:"Invalid pagination"},400);
  const available=Object.values(keys(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS"))).filter(x=>typeof x==="string"&&x.startsWith("sb_publishable_"));
@@ -15,11 +16,13 @@ Deno.serve(async request=>{
  try {
  const headers={"Content-Type":"application/json",apikey:role};
  if(!role.startsWith("sb_secret_"))headers.Authorization="Bearer "+role;
- const result=await fetch(base.replace(/\/$/,"")+"/rest/v1/rpc/"+(query===null?"gerball_paper_report":"gerball_paper_search"),{
- method:"POST",headers,body:JSON.stringify(query===null?{p_limit:+limit,p_offset:+offset}:{p_query:query,p_limit:+limit,p_offset:+offset}),signal:AbortSignal.timeout(25000)});
+ const result=await fetch(base.replace(/\/$/,"")+"/rest/v1/rpc/"+(scope==="today"?"gerball_paper_today":query===null?"gerball_paper_report":"gerball_paper_search"),{
+ method:"POST",headers,body:JSON.stringify(scope==="today"?{p_query:query??"",p_limit:+limit,p_offset:+offset}:query===null?{p_limit:+limit,p_offset:+offset}:{p_query:query,p_limit:+limit,p_offset:+offset}),signal:AbortSignal.timeout(25000)});
  if(!result.ok){console.error("Paper report RPC failed",result.status);return json({error:"Recommendations temporarily unavailable"},502)}
  const value=await result.json();
- if(query===null){
+ if(scope==="today"){
+  if(value?.version!=="paper_today_v1"||!Array.isArray(value.records)||!Number.isInteger(value.total_records)||!/^\d{4}-\d{2}-\d{2}$/.test(value.date)||value.query!==(query??"").trim().toLowerCase())return json({error:"Invalid today report"},502);
+ }else if(query===null){
   if(value?.version!=="paper_ledger_v1"||!Array.isArray(value.summary)||!Array.isArray(value.records)||!Array.isArray(value.preview?.fixtures)||!Number.isInteger(value.total_records))return json({error:"Invalid report"},502);
  }else{
   if(value?.version!=="paper_search_v1"||!Array.isArray(value.records)||!Number.isInteger(value.total_records)||value.query!==query.trim().toLowerCase())return json({error:"Invalid search report"},502);
