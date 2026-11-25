@@ -21,3 +21,15 @@ The next improvement should increase provider collection frequency, after review
 ## Verification
 
 `node scripts/check-live-surebets.cjs` covers 3-way and 9-way completeness, 2-way totals, distinct bookmakers, line matching, stale and mixed snapshots, penny-stake allocation, positive worst-case return, authenticated endpoint, and exchange exclusion.
+
+## Intraday refresh (deployed 25 November 2026)
+
+A separate server-only Edge Function `gerball-surebet-refresh` samples **one** upcoming known provider event's full-time 1X2 markets every 15 minutes between **14:00 and 20:45 UK**. A UTC cron schedule spans 13:00–20:45, with a separate London-clock gate to handle BST and GMT. No new API accounts, subscriptions or stored secrets are needed. This job does not modify the noon league odds collector or the 12:50 extra market collector.
+
+The refresh is deliberately targeted: up to 24 nearest upcoming known event IDs are rotated across the slots, not all matches and markets. Each scheduled slot can claim only once; in-progress claims prevent repeated provider requests. The DB enforces a 28-request daily cap, a conservative cumulative credit reserve, and stops when the provider-reported remaining balance falls below **100**. Provider keys remain server-only and the cron token comes from Supabase Vault. A probe on 25 November successfully collected **60 bookmaker outcome quotes** from **20 bookmakers**, using **one credit** (provider reported 453 remaining).
+
+Every run records the selected fixture, slot, used credits, quota remaining, completion state and error reason. Only validated pre-kickoff prices from matching provider fixture identities are stored, and the Surebets page now shows the last refresh, today's run count and remaining reported credits.
+
+**Coherent snapshot safeguard:** the main read-only feed now combines the archived noon and extra markets with intraday refresh observations, but chooses each market's best odds *only within two minutes of its most recent capture*. This prevents mixing an old attractive bookmaker price with a fresh price to manufacture a false arbitrage signal. Exchange markets are still excluded for uncertain commissions, and all claims of profit remain theoretical until accepted at the selected bookmaker prices. 
+
+The above cap is per day, not a full-coverage or guaranteed-profit claim. Extra markets such as cards and half-time/full-time are **not** refreshed every 15 minutes; they remain on the credit-limited 12:50 daily schedule.

@@ -33,12 +33,33 @@ WITH collected AS MATERIALIZED (
  AND e.bookmaker_key NOT IN ('betfair_ex_uk','smarkets','matchbook')
  AND e.decimal_odds>1 AND e.decimal_odds<1000
  AND (e.market_key IN ('btts','h2h_3_way_h1','halftime_fulltime','alternate_totals_corners','alternate_totals_cards'))
+ UNION ALL
+ SELECT q.event_id,q.league_code,q.home_team,q.away_team,q.kickoff_at,
+ r.uk_day,q.collected_at,q.source_updated_at,q.bookmaker_key,q.bookmaker_name,
+ 'full_time_result'::text,q.selection,NULL::numeric,''::text,q.decimal_odds
+ FROM gerball_surebet_private.refresh_quotes q
+ JOIN gerball_surebet_private.refresh_runs r ON r.id=q.run_id AND r.status='completed'
+ WHERE q.collected_at>now()-interval '24 hours'
+ AND q.source_updated_at>=q.collected_at-interval '90 minutes'
+ AND q.kickoff_at>now() AND q.kickoff_at<now()+interval '15 days'
+ AND q.bookmaker_key NOT IN ('betfair_ex_uk','smarkets','matchbook')
+), newest AS MATERIALIZED (
+ SELECT event_id,kickoff_at,market,coalesce(line,-1) AS line_group,description,
+ MAX(collected_at) AS newest
+ FROM collected
+ GROUP BY event_id,kickoff_at,market,coalesce(line,-1),description
+), aligned AS MATERIALIZED (
+ SELECT c.*
+ FROM collected c JOIN newest n ON n.event_id=c.event_id
+ AND n.kickoff_at=c.kickoff_at AND n.market=c.market
+ AND n.line_group=coalesce(c.line,-1) AND n.description=c.description
+ WHERE c.collected_at>=n.newest-interval '2 minutes'
 ), best AS MATERIALIZED (
- SELECT DISTINCT ON (event_id,market,coalesce(line,-1),description,outcome)
+ SELECT DISTINCT ON (event_id,kickoff_at,market,coalesce(line,-1),description,outcome)
  event_id,league,home,away,kickoff_at,collection_date,collected_at,source_updated_at,
  bookmaker_key,bookmaker_name,market,outcome,line,description,decimal_odds
- FROM collected
- ORDER BY event_id,market,coalesce(line,-1),description,outcome,
+ FROM aligned
+ ORDER BY event_id,kickoff_at,market,coalesce(line,-1),description,outcome,
  decimal_odds DESC,source_updated_at DESC,collected_at DESC,bookmaker_key ASC
 ), limited AS (
  SELECT * FROM best ORDER BY kickoff_at,event_id,market,line NULLS FIRST,outcome LIMIT 6000
@@ -52,6 +73,15 @@ SELECT jsonb_build_object(
  'exchange_prices_excluded',true,
  'scanned_fixture_count',(SELECT count(DISTINCT event_id) FROM collected),
  'complete_market_quote_rows',(SELECT count(*) FROM limited),
+ 'refresh',(
+ SELECT jsonb_build_object(
+ 'slot',r.slot,'updated_at',r.completed_at,'status',r.status,
+ 'stored_quotes',r.stored_quotes,'provider_cost',r.provider_cost,
+ 'requests_remaining',r.remaining_credits,
+ 'daily_request_count',(SELECT count(*) FROM gerball_surebet_private.refresh_runs z WHERE z.uk_day=(now() AT TIME ZONE 'Europe/London')::date),
+ 'daily_credits_used',(SELECT COALESCE(sum(provider_cost),0) FROM gerball_surebet_private.refresh_runs z WHERE z.uk_day=(now() AT TIME ZONE 'Europe/London')::date),
+ 'daily_request_cap',28,'minimum_provider_reserve',100
+ ) FROM gerball_surebet_private.refresh_runs r ORDER BY r.started_at DESC LIMIT 1),
  'quotes',COALESCE((SELECT jsonb_agg(jsonb_build_object(
  'event_id',event_id,'league',league,'home',home,'away',away,'kickoff_at',kickoff_at,
  'market',market,'outcome',outcome,'line',line,'description',description,
@@ -60,8 +90,7 @@ SELECT jsonb_build_object(
  'collection_date',collection_date)
  ORDER BY kickoff_at,event_id,market,outcome) FROM limited),'[]'::jsonb)
 )
-$function$
-
+$function$;
 REVOKE ALL ON FUNCTION public.gerball_surebet_feed() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.gerball_surebet_feed() TO service_role;
 NOTIFY pgrst,'reload schema';

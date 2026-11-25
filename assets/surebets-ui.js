@@ -7,7 +7,7 @@
  const marketLabel=(candidate)=>candidate.market_name+(candidate.line===null?'':' · '+candidate.line);
  const section=el('section',undefined,'card');const header=el('div',undefined,'sb-header');header.append(el('h2','Surebet / arbitrage scanner'));
  const refresh=el('button','Refresh captured odds','secondary');refresh.type='button';header.append(refresh);
- section.append(header,el('p','Combines the best archived prices at separate bookmakers for every possible outcome of the same event and market. No bets are placed.','sb-subtext'));
+ section.append(header,el('p','Compares synchronized bookmaker prices. A capped collector samples one upcoming fixture every 15 minutes from 14:00–20:45 UK. Press Refresh to inspect the latest stored quotes; no bets are placed.','sb-subtext'));
  const controls=el('div',undefined,'sb-control');const stakeLabel=el('label','Total stake');const stake=el('input');stake.type='number';stake.min='1';stake.max='1000000';stake.step='0.01';stake.value='100';stake.setAttribute('aria-label','Total stake in pounds');stakeLabel.append(stake);controls.append(stakeLabel);
  const status=el('p','Checking captured prices…','sb-subtext');status.setAttribute('role','status');section.append(controls,status);
  const warning=el('p','A mathematical surebet is only theoretical until every bookmaker accepts its stake at the displayed price. Limits, changed odds, void rules, market settlement differences, and fees can remove the profit. Exchange quotes with unknown commission are excluded.','sb-warning');section.append(warning);
@@ -35,13 +35,21 @@
   if(!cached)return;const value=Number(stake.value);if(!Number.isFinite(value)||value<1||value>1000000){status.textContent='Choose a total stake from £1 to £1,000,000.';live.replaceChildren();archive.replaceChildren();return}
   const candidates=engine.scan(cached.quotes,{stake:value,now:Date.now(),liveMinutes:15,snapshotMinutes:2});
   const fresher=candidates.filter(x=>x.fresh),older=candidates.filter(x=>!x.fresh);
-  stats.replaceChildren(stat('Fresh surebets',fresher.length),stat('Older theoretical',older.length),stat('Fixtures checked',cached.scanned_fixture_count));
+  const recent=cached.refresh;
+  stats.replaceChildren(
+    stat('Fresh surebets',fresher.length),
+    stat('Older theoretical',older.length),
+    stat('Fixtures checked',cached.scanned_fixture_count),
+    stat('Latest sampled refresh',recent?.updated_at?date(recent.updated_at):'Not yet available'),
+    stat('Refreshes today',recent?.daily_request_count??0),
+    stat('Provider credits remaining',recent?.requests_remaining??'Unknown')
+  );
   live.replaceChildren();archive.replaceChildren();
   if(!fresher.length)live.append(el('p','No verified fresh arbitrage from captured odds. This is not a recommendation to force a bet.','sb-subtext'));
   for(const item of fresher.slice(0,40))live.append(renderOne(item,true));
   if(!older.length)archive.append(el('p','No complete, mathematically profitable older snapshot was found.','sb-subtext'));
   for(const item of older.slice(0,20))archive.append(renderOne(item,false));
-  status.textContent='Evaluated '+cached.complete_market_quote_rows+' best-price outcomes · Feed generated '+date(cached.generated_at)+' · Fresh means quotes captured within 15 minutes and provider updated within 15 minutes.';
+  status.textContent='Evaluated '+cached.complete_market_quote_rows+' synchronized best-price outcomes · Feed generated '+date(cached.generated_at)+' · Last refresh '+(cached.refresh?.status??'Not yet run')+' · Fresh means captured and provider-updated within 15 minutes.';
  }
  async function load(){
   if(loading)return;loading=true;refresh.disabled=true;status.textContent='Loading bookmaker odds…';
