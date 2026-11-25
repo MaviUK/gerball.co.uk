@@ -135,3 +135,26 @@ const settlementUi=fs.readFileSync(new URL('../assets/paper-settlement-health.js
 assert(html.includes('/assets/paper-settlement-health.js'));
 assert(settlementUi.includes('paper_settlement_health_v1'));
 console.log('Paper settlement health verified:',health.records_total,'tracked,',health.settled,'settled,',health.pending_after_grace,'past grace');
+
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const paperDates=require('../assets/paper-dates.js');
+assert.equal(paperDates.day('2026-11-25T23:59:59Z'),'2026-11-25','GMT late night');
+assert.equal(paperDates.day('2026-11-26T00:00:00Z'),'2026-11-26','GMT next day');
+assert.equal(paperDates.day('2026-07-12T22:59:59Z'),'2026-07-12','BST before midnight');
+assert.equal(paperDates.day('2026-07-12T23:00:00Z'),'2026-07-13','BST midnight is UTC 23:00');
+const fixed=new Date('2026-11-25T18:20:00Z');
+const fixtures=[
+ {kickoff_at:'2026-11-25T09:00:00Z',event_id:'morning'},
+ {kickoff_at:'2026-11-25T20:00:00Z',event_id:'evening'},
+ {kickoff_at:'2026-11-26T11:00:00Z',event_id:'tomorrow'},
+ {kickoff_at:'2026-11-27T11:00:00Z',event_id:'future'},
+ {kickoff_at:'broken',event_id:'invalid'}
+];
+assert.deepEqual(paperDates.todayOnly(fixtures,fixed).map(x=>x.event_id),['morning','evening'],'only same UK day');
+assert.deepEqual(paperDates.todayOnly([],fixed),[],'empty preview');
+assert(html.includes('/assets/paper-dates.js'),'London date helper must load before paper bets');
+assert(js.includes('dates.todayOnly(current.preview?.fixtures||[])'),'Paper bet recommendations must filter by kickoff UK day');
+assert(js.includes("Today's match assessments"),'Recommendations heading must explain date restriction');
+assert(js.includes('Complete paper record'),'Historical ledger is preserved');
+console.log('Paper bets UK-day fixtures verified, GMT/BST and historical ledger unchanged.');

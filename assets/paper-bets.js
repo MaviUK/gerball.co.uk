@@ -1,6 +1,8 @@
 (function(root){'use strict';
 const holder=root.document.getElementById('paperBets');
 const view=root.document.getElementById('view-picks');
+const dates=root.GerballPaperDates;
+if(!dates||typeof dates.todayOnly!=='function')return;
 if(!holder||!view)return;
 const marketNames={H:'Home win',D:'Draw',A:'Away win',O25:'Over 2.5 goals',U25:'Under 2.5 goals'};
 const reasonNames={candidate:'Model candidate',team_not_linked:'Team names not linked',insufficient_league_history:'Not enough league history',insufficient_venue_history:'Not enough comparable home/away games',no_captured_odds:'No recorded price',price_out_of_scope:'Odds outside selected range',stale_collection:'Captured odds too old',stale_provider_quote:'Bookmaker quote too old',no_estimated_edge:'No sufficient estimated edge'};
@@ -32,7 +34,7 @@ intro.append($('p','Candidates require adequate league/home/away samples, captur
 const status=$('p','Report not loaded','pb-status');status.setAttribute('role','status');intro.append(status);
 const summaryBox=$('div',undefined,'pb-dashboard');intro.append(summaryBox);
 const candidateSection=$('section',undefined,'card'),candidateTop=$('div',undefined,'pb-top');
-candidateTop.append($('h2','Upcoming match assessments'));
+candidateTop.append($('h2',"Today's match assessments"));
 const selector=$('select');selector.setAttribute('aria-label','Show assessments');for(const [value,label] of [['all','All matches'],['candidate','Model candidates'],['no','No bet']]){const o=$('option',label);o.value=value;selector.append(o)}
 candidateTop.append(selector);candidateSection.append(candidateTop);
 const candidateStatus=$('p','','pb-caption');const cards=$('div',undefined,'pb-list');
@@ -70,13 +72,13 @@ function matchCard(p){
 }
 function drawCandidates(){
  cards.replaceChildren();
- let source=(current.preview?.fixtures||[]);
+ let source=dates.todayOnly(current.preview?.fixtures||[]);
  const total=source.length;
  if(filter==='candidate')source=source.filter(p=>p.decision==='candidate');
  if(filter==='no')source=source.filter(p=>p.decision!=='candidate');
  if(searchQuery)source=source.filter(p=>matchesQuery(p,searchQuery));
- candidateStatus.textContent=source.length+' of '+total+' fixtures shown'+(searchQuery?' for “'+searchQuery+'”':'')+'. Each fixture has at most one market assessed as its leading option; excluded fixtures still show why.';
- if(!source.length){cards.append($('p',total?'No fixtures meet this filter.':'No recorded fixtures for the latest UK capture date. Fresh assessments will appear after the daily collector and recorder run.','pb-caption'));return}
+ candidateStatus.textContent=source.length+' of '+total+' fixtures kicking off today ('+dates.day(new Date())+' UK)'+(searchQuery?' for “'+searchQuery+'”':'')+'. Each fixture has at most one market assessed as its leading option; excluded fixtures still show why.';
+ if(!source.length){cards.append($('p',total?'No matches today meet this filter.':'No fixtures kicking off today in the latest captured assessments. The full paper-bet record remains available below.','pb-caption'));return}
  for(const p of source.slice(0,72))cards.append(matchCard(p));
  if(source.length>72)cards.append($('p','Showing 72 of '+source.length+' matching fixtures.','pb-caption'));
 }
@@ -134,7 +136,7 @@ async function searchLedger(num=0){
 async function load(num=0){
  if(loading)return;loading=true;refresh.disabled=true;downloadButton.disabled=true;status.textContent='Loading paper recommendations and P&L…';
  try{const data=await fetchPage(num);page=num;current=data;drawMetrics();drawCandidates();drawLedger();if(searchQuery)await searchLedger(0);
- status.textContent='Updated '+textDate(data.generated_at)+' · '+data.model_version+' · '+data.preview.fixtures.length+' upcoming recorded fixtures';}
+ status.textContent='Updated '+textDate(data.generated_at)+' · '+data.model_version+' · '+dates.todayOnly(data.preview.fixtures).length+' fixtures today (UK)';}
  catch(error){status.textContent=error.message;if(!current){cards.replaceChildren();scroll.replaceChildren();summaryBox.replaceChildren()}}
  finally{refresh.disabled=false;downloadButton.disabled=false;loading=false}
 }
