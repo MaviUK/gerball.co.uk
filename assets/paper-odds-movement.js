@@ -28,11 +28,14 @@ function render(){
   tile('Without follow-up',data.unfollowed_bets),
   tile('Positive modeled edge at later quote',data.positive_model_edge_at_latest),
   tile('Nonpositive modeled edge',data.nonpositive_model_edge_at_latest),
-  tile('Same original bookmaker',data.same_original_bookmaker_observed)
+  tile('Same original bookmaker',data.same_original_bookmaker_observed),
+  tile('Upcoming paper 1X2 bets',data.upcoming_paper_bets),
+  tile('Upcoming without follow-up',data.upcoming_unfollowed_bets),
+  tile('Today awaiting follow-up',data.today_upcoming_unfollowed_bets)
  );
  const all=data.items,filter=select.value;
  const rows=all.filter(x=>filter==='all'||filter==='positive'&&x.edge_status==='positive_model_edge'||filter==='nonpositive'&&x.edge_status==='nonpositive_model_edge'||filter==='same'&&x.same_book_odds!==null);
- status.textContent='Showing '+rows.length+' of '+data.followed_bets+' sampled comparisons · Latest report '+date(data.generated_at)+'. '+data.unfollowed_bets+' eligible bets have no later quote.';
+ status.textContent='Showing '+rows.length+' of '+data.followed_bets+' sampled comparisons · Today awaiting later quotes: '+data.today_upcoming_unfollowed_bets+' · Latest report '+date(data.generated_at)+'. '+data.unfollowed_bets+' eligible bets have no later quote.';
  tableHost.replaceChildren();
  if(!rows.length){tableHost.append(el('p','No comparisons match this filter. The collector only samples selected fixtures, so missing data must not be treated as evidence of a losing or profitable edge.','pb-caption'));return}
  const scroll=el('div',undefined,'pb-table-wrap'),table=el('table'),head=el('thead'),tr=el('tr');

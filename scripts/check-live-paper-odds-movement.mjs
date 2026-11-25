@@ -30,6 +30,18 @@ assert.equal(result.total_eligible_bets,result.followed_bets+result.unfollowed_b
 assert.equal(result.followed_bets,result.positive_model_edge_at_latest+result.nonpositive_model_edge_at_latest);
 assert.equal(result.followed_bets,result.higher_fixed_price+result.lower_fixed_price+result.unchanged_fixed_price);
 assert(result.same_original_bookmaker_observed<=result.followed_bets);
+assert(Number.isInteger(result.upcoming_paper_bets));
+assert(Number.isInteger(result.upcoming_unfollowed_bets));
+assert(Number.isInteger(result.today_upcoming_unfollowed_bets));
+assert(result.today_upcoming_unfollowed_bets<=result.upcoming_unfollowed_bets);
+assert(result.upcoming_unfollowed_bets<=result.upcoming_paper_bets);
+assert(result.upcoming_paper_bets<=result.total_eligible_bets);
+const picker=fs.readFileSync(new URL('../supabase/surebet-today-selector.sql',import.meta.url),'utf8');
+assert(picker.includes("followed_runs ASC,attempts_today ASC"),'Unfollowed paper bets should get priority');
+assert(picker.includes("b.market IN ('H','D','A')"),'Only 1X2 selections can be refreshed and prioritized');
+assert(picker.includes("r.status='completed'")||picker.includes("rr.status='completed'"),'Only completed coverage counts');
+assert(picker.includes("daily_28_request_cap")&&picker.includes("provider_quota_reserve"),'Provider spend controls must remain');
+
 assert(result.items.length<=100);
 for(const row of result.items){
  assert(['H','D','A'].includes(row.market));

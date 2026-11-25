@@ -36,7 +36,7 @@ BEGIN
    CASE WHEN (s.kickoff_at AT TIME ZONE 'Europe/London')::date=day THEN 0 ELSE 1 END today_rank,
    CASE WHEN EXISTS(
     SELECT 1 FROM gerball_advice_private.paper_bets b
-    WHERE b.event_id=s.event_id AND b.kickoff_at=s.kickoff_at
+    WHERE b.event_id=s.event_id AND b.kickoff_at=s.kickoff_at AND b.market IN ('H','D','A') AND b.recorded_at<s.kickoff_at
    ) THEN 0 ELSE 1 END paper_rank
   FROM public.gerball_odds_snapshots s
   WHERE s.collection_date>=day-1 AND s.kickoff_at>uk+interval '7 minutes'
@@ -49,12 +49,36 @@ BEGIN
   WHERE today_rank=(SELECT min(today_rank) FROM candidates)
    AND paper_rank=(SELECT min(paper_rank) FROM candidates
     WHERE today_rank=(SELECT min(today_rank) FROM candidates))
+ ), ranked AS MATERIALIZED(
+  SELECT p.*,
+   (
+    SELECT count(DISTINCT rr.id)::integer
+    FROM gerball_surebet_private.refresh_runs rr
+    JOIN gerball_surebet_private.refresh_quotes qq ON qq.run_id=rr.id
+    JOIN gerball_advice_private.paper_bets b
+      ON b.event_id=p.event_id AND b.kickoff_at=p.kickoff_at
+      AND b.market=qq.selection AND b.recorded_at<qq.collected_at
+    WHERE rr.event_id=p.event_id AND rr.kickoff_at=p.kickoff_at
+      AND rr.status='completed' AND rr.completed_at<=p.kickoff_at
+      AND qq.source_updated_at<=qq.collected_at
+      AND qq.source_updated_at>=qq.collected_at-interval '15 minutes'
+      AND qq.bookmaker_key NOT IN ('betfair_ex_uk','smarkets','matchbook')
+   ) AS followed_runs,
+   (
+    SELECT count(*)::integer
+    FROM gerball_surebet_private.refresh_runs rr
+    WHERE rr.event_id=p.event_id AND rr.kickoff_at=p.kickoff_at
+      AND rr.uk_day=day
+   ) AS attempts_today
+  FROM pool p
  ), numbered AS(
-  SELECT *,row_number() OVER(ORDER BY kickoff_at,football_data_league,event_id) rn FROM pool
- ), size AS (SELECT count(*) n FROM numbered)
+  SELECT *,row_number() OVER(
+   ORDER BY followed_runs ASC,attempts_today ASC,kickoff_at,football_data_league,event_id
+  ) rn FROM ranked
+ )
  SELECT n.* INTO fixture
- FROM numbered n CROSS JOIN size z
- WHERE n.rn=1+((CASE WHEN p_mode='probe' THEN 0 ELSE ((hr-14)*4+(mi-mi%15)/15) END)%NULLIF(z.n,0));
+ FROM numbered n
+ WHERE n.rn=1;
  IF NOT FOUND THEN RETURN jsonb_build_object('claimed',false,'reason','no_upcoming_stored_events'); END IF;
  INSERT INTO gerball_surebet_private.refresh_runs(uk_day,slot,event_id,sport_key,league_code,home_team,away_team,kickoff_at)
  VALUES(day,slot_key,fixture.event_id,fixture.sport_key,fixture.football_data_league,
