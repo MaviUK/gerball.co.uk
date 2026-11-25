@@ -50,7 +50,7 @@ function matchCard(p){
  ['Captured odds',p.quoted_odds?fnum(p.quoted_odds):'Unavailable'],
  ['Bookmaker',p.bookmaker||'—'],
  ['Model estimate',p.probability===null?'Unavailable':fnum(Number(p.probability)*100,1)+'%'],
- ['Estimated edge',p.estimated_edge===null?'Unavailable':fnum(Number(p.estimated_edge)*100,1)+'%'],
+ ['Exploratory model edge',p.decision==='candidate'||p.decision==='no_estimated_edge'?(p.estimated_edge===null?'Unavailable':fnum(Number(p.estimated_edge)*100,1)+'%'):'Not assessed (excluded)'],
  ['Home / away samples',(p.home_sample??0)+' / '+(p.away_sample??0)],
  ['Decision',reasonNames[p.decision]||p.decision]]){dl.append($('dt',name),$('dd',value))}
  box.append(dl);
