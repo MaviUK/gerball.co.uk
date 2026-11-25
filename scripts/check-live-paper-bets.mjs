@@ -82,3 +82,30 @@ assert(js.includes('searchInput.type=\'search\''),'Search input must exist');
 assert(js.includes('searchLedger(page+1)'),'Filtered searches must keep paging server-side');
 assert(js.includes('searchResult?.total_records'),'CSV export must use filtered total');
 console.log('Paper bet search verified:',searched.total_records,'matching recorded bets');
+
+const breakdownEndpoint=url+'/functions/v1/gerball-paper-breakdown';
+const breakdownDenied=await fetch(breakdownEndpoint,{signal:AbortSignal.timeout(15000)});
+assert.equal(breakdownDenied.status,401,'Private grouped results require application key');
+const breakdownPost=await fetch(breakdownEndpoint,{method:'POST',headers:{apikey:key},signal:AbortSignal.timeout(15000)});
+assert.equal(breakdownPost.status,405,'Grouped report must be read-only');
+const breakdownResponse=await fetch(breakdownEndpoint,{headers:{apikey:key},signal:AbortSignal.timeout(30000)});
+assert.equal(breakdownResponse.status,200,'Grouped paper reports must be available');
+const breakdown=await breakdownResponse.json();
+assert.equal(breakdown.version,'paper_breakdown_v1');
+assert.equal(breakdown.total_bets,data.total_records);
+assert.equal(breakdown.total_net_units,summary.net_units);
+for(const kind of ['market','league','home_team','away_team','bookmaker','season']){
+ const group=breakdown.groups.filter(x=>x.kind===kind);
+ assert.equal(group.reduce((n,x)=>n+x.bets,0),breakdown.total_bets,kind+' bets reconcile');
+ assert.equal(group.reduce((n,x)=>n+x.settled,0),breakdown.settled_bets,kind+' settlements reconcile');
+ assert.equal(group.reduce((n,x)=>n+Number(x.net_units),0),Number(breakdown.total_net_units),kind+' profit reconciles');
+ for(const row of group){
+  assert.equal(row.bets,row.settled+row.pending+row.review);
+  assert.equal(row.settled,row.won+row.lost);
+  assert.equal(row.roi_pct===null,row.settled_units===0,'ROI requires settled bets');
+ }
+}
+const groupedUi=fs.readFileSync(new URL('../assets/paper-breakdown.js',import.meta.url),'utf8');
+assert(html.includes('assets/paper-breakdown.js'));
+assert(groupedUi.includes('gerball:viewchange')&&groupedUi.includes('pb-breakdown-kind'));
+console.log('Paper betting performance groups verified:',breakdown.groups.length,'categories and',breakdown.total_bets,'bets');

@@ -40,3 +40,11 @@
 #paperBets .pb-search input{flex:1;min-width:180px;width:auto;max-width:580px;min-height:42px}
 #paperBets .pb-search button{width:auto;min-height:42px}
 @media(max-width:600px){#paperBets .pb-search input{min-width:0;width:100%}}
+
+#paperBets .pb-breakdown{margin-top:20px}
+#paperBets .pb-breakdown-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:15px 0}
+#paperBets .pb-breakdown-controls label{font-size:13px;font-weight:650;color:#d6e5f7}
+#paperBets .pb-breakdown-controls select{width:auto;min-height:40px;max-width:200px}
+#paperBets .pb-breakdown .pb-table-wrap table{min-width:880px}
+#paperBets .pb-breakdown .pb-table-wrap th,#paperBets .pb-breakdown .pb-table-wrap td{font-variant-numeric:tabular-nums}
+@media(max-width:600px){#paperBets .pb-breakdown-controls{gap:8px}#paperBets .pb-breakdown-controls select{max-width:160px}}

@@ -49,3 +49,11 @@ Upcoming assessments filter the current captured preview locally, keeping the ex
 The search resets paging when the query changes, debounces user typing, cancels stale queries and safely handles no matches and errors. The Clear button restores the full list; the original lifetime P&L dashboard remains an unfiltered lifetime total, not the result of a search. CSV export downloads the matching records when a search is active and all stored records otherwise. No paper predictions, results, P&L totals or captured odds are modified.
 
 The extended read-only Edge Function accepts `?q=...` in addition to the original unfiltered endpoint. User input is limited to 100 characters. No public SQL permissions or write operations were added.
+
+## Performance breakdown
+
+A new read-only group report displays every saved paper selection by market, league, home team, away team, bookmaker and season. Each dimension independently reconciles to the full paper ledger, and shows recommendations, settled, wins/losses, pending, review, settled stake, net hypothetical units and ROI when defined. No result is considered won or lost until the latest imported result revision is settled. This is the entire ledger, not the search filter or the first 250 records.
+
+The `public.gerball_paper_breakdown()` function is a SECURITY INVOKER, executable only by service role. The read-only `gerball-paper-breakdown` Edge Function is GET-only, verifies the website publishable key and rejects inconsistent aggregates. The data feeds the new performance panel in Paper bets & P&L without changing any bets or profit accounting.
+
+Importantly, early samples can have zero settlements: **do not rank a group by ROI or describe it as profitable** if it has no settled matches. Home and away groupings are separate dimensions and cannot be added together.
