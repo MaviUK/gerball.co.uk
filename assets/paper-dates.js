@@ -12,5 +12,19 @@ function isToday(fixture,now=new Date()){
 function todayOnly(fixtures,now=new Date()){
  return Array.isArray(fixtures)?fixtures.filter(f=>isToday(f,now)):[];
 }
-return{day,isToday,todayOnly};
+function upcomingToday(fixtures,now=new Date()){
+ const timestamp=new Date(now).getTime();
+ if(!Number.isFinite(timestamp))return [];
+ return todayOnly(fixtures,now).filter(f=>Date.parse(f.kickoff_at)>timestamp);
+}
+function nextChangeAt(fixtures,now=new Date()){
+ const today=day(now);if(!today)return null;
+ const [year,month,date]=today.split('-').map(Number);
+ const midnightUtc=Date.UTC(year,month-1,date+1);
+ // A London midnight is either UTC midnight or 23:00 UTC, including clock-change days.
+ let next=day(midnightUtc-3600000)!==today?midnightUtc-3600000:midnightUtc;
+ for(const fixture of upcomingToday(fixtures,now))next=Math.min(next,Date.parse(fixture.kickoff_at));
+ return next;
+}
+return{day,isToday,todayOnly,upcomingToday,nextChangeAt};
 });

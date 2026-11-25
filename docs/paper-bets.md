@@ -16,6 +16,16 @@ Open [Paper bets & P&L](https://gerball.co.uk/#picks).
 - Illustrative paper stakes range from **1 to 5 units**: 1 unit at 8% nominal edge, and +1 unit per further 6 percentage points, capped at five. These levels do not represent a bankroll recommendation or monetary values.
 - Same-game cards, corners, booking and combination bets are **not** suggested because the present captured provider feed contains no verified joint-market price or joint probability model. Multiplying independent prices would be misleading for correlated selections.
 
+## Today's match assessments
+
+The assessments list shows only fixtures whose kickoff is still ahead on the current **Europe/London** calendar day. The calendar-day helper remains separate from this display rule, so earlier fixtures and future fixtures can still be retained in the complete immutable ledger.
+
+While Paper Bets is visible, a local clock check removes cards at kickoff and updates the UK date at midnight, including GMT/BST changes. The display also updates immediately when returning to the panel, restoring a hidden browser tab, focusing the window or restoring the page. Expired cards are removed before a network request completes, including when the saved report cannot be refreshed.
+
+The page refreshes the existing read-only paper report after five minutes while visible and at a UK date change. These requests read already stored data; they do not trigger odds-provider calls, record a bet or change a settlement. Automatic refresh keeps the selected assessment filter, search text and ledger page. Leaving the panel or hiding the tab pauses refresh and cancels obsolete report/search requests. A late response from an obsolete request cannot replace newer results. Manual Refresh starts at page one; Clear restores the unfiltered first page.
+
+Each card shows the age of its captured price separately from the frozen model assessment. The two-hour qualification rule is evaluated at the original observation time. A later clock check does not recalculate the decision, suggested units or hypothetical return. Prices older than two hours are explicitly labelled as saved assessments rather than being presented as newly captured prices. A failed refresh identifies the previously loaded report and keeps its timestamp visible.
+
 ## Immutable paper ledger
 
 At 12:35 UK each day, with retry slots at 12:40 and 12:45, the database requires all 18 historical-screen league captures before recording selected paper bets. UK GMT/BST time guard prevents duplicate captures from the two UTC hours. It also rejects any change to the frozen model implementation hash.
@@ -37,6 +47,7 @@ The page displays lifetime paper net units, number of settled/winning/losing/pen
 ```sh
 node scripts/check-site.cjs
 node --check assets/paper-bets.js
+node --test scripts/check-paper-bets-lifecycle.mjs
 node scripts/check-live-paper-bets.mjs
 ```
 

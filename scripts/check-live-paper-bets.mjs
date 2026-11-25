@@ -152,9 +152,10 @@ const fixtures=[
  {kickoff_at:'broken',event_id:'invalid'}
 ];
 assert.deepEqual(paperDates.todayOnly(fixtures,fixed).map(x=>x.event_id),['morning','evening'],'only same UK day');
+assert.deepEqual(paperDates.upcomingToday(fixtures,fixed).map(x=>x.event_id),['evening'],'assessments exclude started fixtures');
 assert.deepEqual(paperDates.todayOnly([],fixed),[],'empty preview');
 assert(html.includes('/assets/paper-dates.js'),'London date helper must load before paper bets');
-assert(js.includes('dates.todayOnly(current.preview?.fixtures||[])'),'Paper bet recommendations must filter by kickoff UK day');
+assert(js.includes('dates.upcomingToday('),'Paper bet recommendations must filter by UK day and future kickoff');
 assert(js.includes("Today's match assessments"),'Recommendations heading must explain date restriction');
 assert(js.includes('Complete paper record'),'Historical ledger is preserved');
 console.log('Paper bets UK-day fixtures verified, GMT/BST and historical ledger unchanged.');
