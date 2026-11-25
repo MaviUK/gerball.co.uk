@@ -2,15 +2,18 @@ CREATE OR REPLACE FUNCTION public.gerball_paper_odds_movement()
  RETURNS jsonb
  LANGUAGE sql
  STABLE
+ SECURITY INVOKER
  SET search_path TO ''
 AS $function$
-WITH eligible AS MATERIALIZED (
+WITH paper AS MATERIALIZED (
  SELECT b.id,b.event_id,b.kickoff_at,b.home_team,b.away_team,b.league_code,b.market,
  b.bookmaker_name AS original_bookmaker,b.bookmaker_key AS original_bookmaker_key,
  b.odds AS original_odds,b.model_probability,b.estimated_edge,b.recorded_at,
  b.quote_collected_at AS original_capture,
  b.recommended_units
  FROM gerball_advice_private.paper_bets b
+), eligible AS MATERIALIZED (
+ SELECT * FROM paper b
  WHERE b.market IN ('H','D','A')
 ), runs AS MATERIALIZED (
  SELECT b.id AS bet_id,r.id AS run_id,r.completed_at,
@@ -23,7 +26,7 @@ WITH eligible AS MATERIALIZED (
  q.collected_at,q.source_updated_at
  FROM runs r JOIN gerball_surebet_private.refresh_quotes q
    ON q.run_id=r.run_id AND q.selection=r.market AND q.event_id=r.event_id AND q.kickoff_at=r.kickoff_at
- WHERE q.collected_at>=(SELECT recorded_at FROM eligible WHERE id=r.bet_id)
+ WHERE q.collected_at>(SELECT recorded_at FROM eligible WHERE id=r.bet_id)
  AND q.collected_at<r.kickoff_at
  AND q.source_updated_at<=q.collected_at
  AND q.source_updated_at>=q.collected_at-interval '15 minutes'
@@ -73,6 +76,75 @@ WITH eligible AS MATERIALIZED (
  LEFT JOIN original_book ob ON ob.bet_id=b.id
 ), items AS (
  SELECT * FROM rows WHERE latest_fixed_odds IS NOT NULL ORDER BY latest_fixed_capture DESC,id DESC LIMIT 100
+), coverage_bets AS MATERIALIZED (
+ -- Include unsupported markets for an honest denominator, but never count them
+ -- as failed 1X2 follow-ups. Every saved bet appears once, including zero coverage.
+ SELECT b.id,b.league_code,b.market,b.kickoff_at,
+  b.market IN ('H','D','A') AS eligible,
+  r.latest_fixed_odds IS NOT NULL AS followed,
+  r.latest_fixed_capture AS last_followup_at
+ FROM paper b LEFT JOIN rows r ON r.id=b.id
+), coverage_periods AS (
+ SELECT p.period,b.*
+ FROM (VALUES ('all'),('today')) p(period)
+ LEFT JOIN coverage_bets b ON p.period='all'
+  OR (b.kickoff_at AT TIME ZONE 'Europe/London')::date=(now() AT TIME ZONE 'Europe/London')::date
+), coverage_counts AS MATERIALIZED (
+ SELECT period,league_code AS league,market,
+  CASE WHEN grouping(league_code)=1 AND grouping(market)=1 THEN 'totals'
+   WHEN grouping(market)=1 THEN 'leagues'
+   WHEN grouping(league_code)=1 THEN 'markets'
+   ELSE 'league_markets' END AS dimension,
+  count(id) AS paper_bets,
+  count(id) FILTER(WHERE eligible) AS eligible_bets,
+  count(id) FILTER(WHERE followed) AS followed_bets,
+  count(id) FILTER(WHERE eligible AND NOT followed) AS unfollowed_bets,
+  round(100.0*count(id) FILTER(WHERE followed)
+   /NULLIF(count(id) FILTER(WHERE eligible),0),2) AS coverage_pct,
+  count(id) FILTER(WHERE eligible AND NOT followed AND kickoff_at>now()) AS upcoming_unfollowed_bets,
+  count(id) FILTER(WHERE eligible AND NOT followed AND kickoff_at<=now()) AS expired_unfollowed_bets,
+  count(id) FILTER(WHERE NOT eligible) AS unsupported_bets,
+  max(last_followup_at) AS last_followup_at
+ FROM coverage_periods
+ GROUP BY GROUPING SETS ((period),(period,league_code),(period,market),(period,league_code,market))
+), coverage_groups AS MATERIALIZED (
+ SELECT period,dimension,league,market,
+  (to_jsonb(c)-'period'-'dimension'-'league'-'market') ||
+   CASE WHEN dimension IN ('leagues','league_markets') THEN jsonb_build_object('league',league) ELSE '{}'::jsonb END ||
+   CASE WHEN dimension IN ('markets','league_markets') THEN jsonb_build_object('market',market) ELSE '{}'::jsonb END AS stats
+ FROM coverage_counts c
+ WHERE dimension='totals' OR paper_bets>0
+), coverage_windows AS (
+ SELECT p.period,jsonb_build_object(
+  'totals',(SELECT stats FROM coverage_groups WHERE period=p.period AND dimension='totals'),
+  'leagues',COALESCE((SELECT jsonb_agg(stats ORDER BY league) FROM coverage_groups WHERE period=p.period AND dimension='leagues'),'[]'::jsonb),
+  'markets',COALESCE((SELECT jsonb_agg(stats ORDER BY market) FROM coverage_groups WHERE period=p.period AND dimension='markets'),'[]'::jsonb),
+  'league_markets',COALESCE((SELECT jsonb_agg(stats ORDER BY league,market) FROM coverage_groups WHERE period=p.period AND dimension='league_markets'),'[]'::jsonb)
+ ) AS stats
+ FROM (VALUES ('all'),('today')) p(period)
+), collection_runs AS MATERIALIZED (
+ -- Costs are aggregated from one row per refresh, never multiplied by the
+ -- number of returned bookmakers or selections. This is a collection-day view.
+ SELECT r.id,r.league_code,r.status,r.provider_cost,
+  EXISTS(SELECT 1 FROM best_per_run b WHERE b.run_id=r.id) AS has_followup,
+  (SELECT count(*) FROM earliest e WHERE e.run_id=r.id) AS newly_followed_bets
+ FROM gerball_surebet_private.refresh_runs r
+ WHERE r.uk_day=(now() AT TIME ZONE 'Europe/London')::date
+), collection_counts AS MATERIALIZED (
+ SELECT league_code AS league,grouping(league_code)=1 AS is_total,
+  count(*) AS refresh_runs,
+  count(*) FILTER(WHERE status='completed') AS completed_runs,
+  count(*) FILTER(WHERE status='failed') AS failed_runs,
+  count(*) FILTER(WHERE status='claimed') AS in_progress_runs,
+  count(*) FILTER(WHERE has_followup) AS runs_with_followup,
+  COALESCE(sum(newly_followed_bets),0) AS newly_followed_bets,
+  COALESCE(sum(provider_cost) FILTER(WHERE status<>'claimed'),0) AS reported_credits,
+  count(*) FILTER(WHERE provider_cost IS NULL OR status='claimed') AS unknown_cost_runs
+ FROM collection_runs GROUP BY GROUPING SETS ((),(league_code))
+), collection_groups AS (
+ SELECT is_total,league,(to_jsonb(c)-'is_total'-'league') ||
+  CASE WHEN NOT is_total THEN jsonb_build_object('league',league) ELSE '{}'::jsonb END AS stats
+ FROM collection_counts c
 )
 SELECT jsonb_build_object(
  'version','paper_odds_movement_v1',
@@ -92,6 +164,16 @@ SELECT jsonb_build_object(
  'unchanged_fixed_price',(SELECT count(*) FROM rows WHERE direction='unchanged'),
  'same_original_bookmaker_observed',(SELECT count(*) FROM rows WHERE same_book_odds IS NOT NULL),
  'data_limitations','Only sparse sampled full-time result markets; original prices may be Exchange whereas new prices exclude Exchange commission; no assertion of same-bookmaker CLV or demonstrated profitability.',
+ 'coverage',jsonb_build_object(
+  'version','paper_followup_coverage_v1',
+  'uk_date',(now() AT TIME ZONE 'Europe/London')::date,
+  'all',(SELECT stats FROM coverage_windows WHERE period='all'),
+  'today',(SELECT stats FROM coverage_windows WHERE period='today'),
+  'collection_today',jsonb_build_object(
+   'totals',(SELECT stats FROM collection_groups WHERE is_total),
+   'leagues',COALESCE((SELECT jsonb_agg(stats ORDER BY league) FROM collection_groups WHERE NOT is_total),'[]'::jsonb)
+  )
+ ),
  'items',COALESCE((SELECT jsonb_agg(jsonb_build_object(
   'bet_id',id,'event_id',event_id,'league',league_code,'home',home_team,'away',away_team,
   'market',market,'kickoff_at',kickoff_at,'original_bookmaker',original_bookmaker,

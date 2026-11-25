@@ -79,3 +79,27 @@
 #paperBets .pb-movement-tile strong{font-size:23px;font-variant-numeric:tabular-nums;color:#81d9b4}
 #paperBets .pb-odds-movement .pb-table-wrap table{min-width:1000px}
 @media(max-width:650px){#paperBets .pb-movement-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+#paperBets .pb-coverage{border-top:1px solid #304b66;border-bottom:1px solid #304b66;margin:22px 0;padding:20px 0;font-size:1rem}
+#paperBets .pb-coverage h3{font-size:1.2rem;margin:0 0 10px;line-height:1.4}
+#paperBets .pb-coverage h4{font-size:1.05rem;margin:24px 0 8px;line-height:1.4}
+#paperBets .pb-coverage .pb-caption{font-size:.875rem;line-height:1.6;max-width:100ch}
+#paperBets .pb-coverage-controls{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:18px 0}
+#paperBets .pb-coverage-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+#paperBets .pb-coverage-field label{font-size:.875rem;font-weight:650;color:#d6e5f7}
+#paperBets .pb-coverage-field select{font-size:1rem;min-height:44px;width:100%;max-width:290px;padding-right:34px}
+#paperBets .pb-coverage-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
+#paperBets .pb-coverage-tile{border:1px solid #304b66;background:#102239;border-radius:10px;padding:13px;min-width:0}
+#paperBets .pb-coverage-tile span{display:block;font-size:.875rem;line-height:1.45;color:#afc3d6;min-height:2.9em}
+#paperBets .pb-coverage-tile strong{display:block;font-size:1.55rem;font-variant-numeric:tabular-nums;color:#81d9b4;margin-top:5px}
+#paperBets .pb-coverage .pb-table-wrap{margin:12px 0}
+#paperBets .pb-coverage .pb-table-wrap table{min-width:900px;font-size:.875rem}
+#paperBets .pb-coverage .pb-coverage-cost-table table{min-width:760px}
+#paperBets .pb-coverage th,#paperBets .pb-coverage td{font-size:.875rem;line-height:1.5;font-variant-numeric:tabular-nums;white-space:normal}
+#paperBets .pb-coverage th:first-child{min-width:165px;max-width:290px}
+#paperBets .pb-coverage tbody th{font-weight:600;color:#d6e5f7}
+#paperBets .pb-coverage tfoot{font-weight:700;background:#172e45}
+#paperBets .pb-coverage tfoot th,#paperBets .pb-coverage tfoot td{border-top:1px solid #48627e}
+#paperBets .pb-coverage-empty{border:1px dashed #3c5670;border-radius:10px;padding:17px;font-size:.875rem;line-height:1.6;color:#c4d8e9}
+#paperBets .pb-coverage select:focus-visible,#paperBets .pb-coverage .pb-table-wrap:focus-visible{outline:2px solid #81d9b4;outline-offset:3px}
+@media(max-width:760px){#paperBets .pb-coverage-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#paperBets .pb-coverage-controls{gap:12px}#paperBets .pb-coverage-field{flex:1 1 200px}#paperBets .pb-coverage-field select{max-width:none}}

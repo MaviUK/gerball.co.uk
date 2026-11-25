@@ -8,6 +8,7 @@ const button=el('button','Refresh movement report','secondary');button.type='but
 section.append(el('p','Compares the frozen paper price with a later sampled fixed-odds quote for the same fixture and full-time result. Movement between different bookmakers is not same-bookmaker closing-line value (CLV).','pb-caption'));
 const status=el('p','Not loaded','pb-caption');status.setAttribute('role','status');section.append(status);
 const summary=el('div',undefined,'pb-movement-summary');section.append(summary);
+const coverage=root.GerballPaperCoverage?.create(section);
 const controls=el('div',undefined,'pb-breakdown-controls');const label=el('label','Show comparisons');label.htmlFor='pb-movement-filter';
 const select=el('select');select.id='pb-movement-filter';
 for(const [val,title] of [['all','All sampled comparisons'],['positive','Model edge still positive'],['nonpositive','Model edge no longer positive'],['same','Same original bookmaker']]){const option=el('option',title);option.value=val;select.append(option)}
@@ -33,6 +34,7 @@ function render(){
   tile('Upcoming without follow-up',data.upcoming_unfollowed_bets),
   tile('Today awaiting follow-up',data.today_upcoming_unfollowed_bets)
  );
+ coverage?.render(data.coverage);
  const all=data.items,filter=select.value;
  const rows=all.filter(x=>filter==='all'||filter==='positive'&&x.edge_status==='positive_model_edge'||filter==='nonpositive'&&x.edge_status==='nonpositive_model_edge'||filter==='same'&&x.same_book_odds!==null);
  status.textContent='Showing '+rows.length+' of '+data.followed_bets+' sampled comparisons · Today awaiting later quotes: '+data.today_upcoming_unfollowed_bets+' · Latest report '+date(data.generated_at)+'. '+data.unfollowed_bets+' eligible bets have no later quote.';
@@ -65,8 +67,8 @@ async function load(){
   if(!r.ok)throw Error('Movement report unavailable ('+r.status+')');
   const report=await r.json();
   if(report.version!=='paper_odds_movement_v1'||!Array.isArray(report.items)||!Number.isInteger(report.followed_bets))throw Error('Unexpected movement report');
-  data=report;render();
- }catch(e){status.textContent='Could not load movement report: '+e.message;tableHost.replaceChildren()}
+  data=report;select.disabled=false;render();
+ }catch(e){data=null;select.disabled=true;summary.replaceChildren();coverage?.clear('Coverage unavailable because the movement report could not be refreshed.');status.textContent='Could not load movement report: '+e.message;tableHost.replaceChildren()}
  finally{loading=false;button.disabled=false}
 }
 button.addEventListener('click',load);select.addEventListener('change',render);

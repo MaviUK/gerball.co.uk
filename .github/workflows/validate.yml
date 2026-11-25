@@ -49,6 +49,8 @@ jobs:
         run: node scripts/check-live-paper-refreshed-prices.mjs
       - name: Verify saved-price movements and modeled follow-up edge
         run: node scripts/check-live-paper-odds-movement.mjs
+      - name: Verify paper coverage scopes, market gaps and report failure handling
+        run: node --test scripts/check-paper-coverage.mjs
       - name: Verify paper recommendations, unit staking and P&L ledger
         run: node scripts/check-live-paper-bets.mjs
       - name: Reconcile live historical league-market benchmarks

@@ -112,3 +112,26 @@ The existing `gerball_arb_claim` selector now prioritizes saved **full-time 1X2 
 The selector considers only saved H/D/A paper bets captured before kickoff because over/under 2.5 and other exotic markets are not available on this 1X2-only sampler. To count a bet as covered, a **completed** run must contain a matching selection with a source timestamp within 15 minutes of collection, a later capture than the paper recommendation, and no unmodeled exchange commission. Repeated observations still remain available for genuine movement research, but are secondary to as-yet-unobserved matches.
 
 The Paper Bet Odds Movement dashboard now shows how many eligible paper bets are still upcoming, how many upcoming have no follow-up, and how many of those are kicking off today. The live database initially showed 131 eligible paper bets, 5 later price comparisons, 129 upcoming and 125 upcoming without follow-up; these figures will change as fixtures advance. No additional provider credits are consumed by the report or new calculations, and no original paper selections, stakes, outcomes or P&L are modified.
+
+## Follow-up coverage by league and market — 25 November 2026
+
+The movement report now includes coverage for every saved paper bet, grouped by league, market, or league and market together. It defaults to **today's matches in Europe/London time**, with an **all recorded matches** option. These are aggregate views; the recommendation cards keep their existing today-only behavior.
+
+The coverage denominator contains full-time Home / Draw / Away selections only. Other saved markets, currently over/under 2.5 goals, appear as **Not collected** and are excluded from that denominator. A group with no eligible bets has a null coverage percentage, displayed as a dash rather than 0%. Groups with eligible bets and zero follow-ups remain visible. Counts come from the complete saved cohort, independently of the movement table's 100-comparison display limit.
+
+| Field | Meaning |
+| --- | --- |
+| Eligible | Saved full-time H/D/A paper selections |
+| With follow-up | Eligible bets with at least one valid later pre-kickoff quote |
+| Coverage | With follow-up divided by eligible, as a percentage |
+| Upcoming missing | Eligible bets without follow-up whose kickoff is still in the future |
+| Kickoff passed, missing | Eligible bets without follow-up whose kickoff has arrived or passed |
+| Not collected | Saved markets unsupported by the current follow-up collector |
+
+A valid comparison must match the saved event, kickoff, and selection; come from a completed refresh before or at kickoff; and have been captured strictly after the recommendation and before kickoff. Its bookmaker timestamp must be no later than capture and no more than 15 minutes older. Fixed-odds prices must be greater than 1 and at most 1000; the existing exchange exclusions remain. The bookmaker timestamp need not be later than the paper bet: a still-current, unchanged bookmaker quote can be observed again. A bet is counted once regardless of how many bookmakers or refreshes supply a quote.
+
+**Today's collection use** is grouped by the refresh run's UK collection day and league, independently of the match-date filter. It shows attempts, completed and failed runs, useful refreshes, newly covered bets, and recorded provider credits. A useful refresh supplies at least one valid paper-bet follow-up. Newly covered bets are attributed once to their earliest valid completed refresh, breaking completion-time ties by run ID. One request may cover multiple selections, so its cost is counted once and is not split across market rows. An unsuccessful paper comparison does not mean that a request had no other value to the surebet scanner.
+
+Credits are the collector's recorded `provider_cost` values, not a reconciliation of the provider's billing account. Claimed/in-progress runs have unfinalized cost and are reported as unknown. The existing collector can record zero when a cost header is unavailable, so the report cannot establish the exact charge for such runs. This update does not change how the collector records costs, chooses fixtures, or enforces its daily request and credit limits.
+
+The backend adds `coverage` (`paper_followup_coverage_v1`) to the existing `gerball_paper_odds_movement()` result. It retains SECURITY INVOKER, an empty search path, and service-role-only execution behind the existing GET-only Edge Function. The browser uses the same report request; grouping and scope changes read the already-returned aggregates. Coverage describes collection completeness, not predictive quality, actual execution, closing-line value, or profit. Failed refreshes clear displayed report values to avoid presenting stale data as a newly loaded result.
