@@ -43,6 +43,13 @@ toolbarTop.append(make('strong','Match date'),make('span','Shared across the bet
 toolbar.append(toolbarTop);
 const sharedFilters=intro.querySelector('.pb-history-filters');toolbar.append(sharedFilters);
 const originalTitle=intro.querySelector('.pb-top h2');if(originalTitle)originalTitle.textContent='Odds-based paper bets';
+const criteria=intro.querySelector('.pb-warning');
+if(criteria){
+ const disclosure=make('details',undefined,'gb-paper-criteria');
+ disclosure.append(make('summary','How this model qualifies a paper bet'));
+ criteria.replaceWith(disclosure);
+ disclosure.append(criteria);
+}
 const alert=make('p',undefined,'gb-paper-scope-alert');alert.hidden=true;alert.setAttribute('role','status');toolbar.append(alert);
 const tabCaption=make('div',undefined,'gb-paper-tab-caption');tabCaption.setAttribute('aria-live','off');
 const tabHeading=make('strong',undefined),tabDetail=make('span',undefined);tabCaption.append(tabHeading,tabDetail);
