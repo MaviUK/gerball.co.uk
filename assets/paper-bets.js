@@ -20,6 +20,7 @@ let selectedDate=dates.day(new Date()),ledgerError=null;
 let searchQuery='',searchResult=null,searchCounter=0,searchTimer=null,searchController=null;
 let reportCounter=0,reportController=null,activityTimer=null,lastLoadedAt=null,lastAttemptAt=null,lastAttemptDay=null;
 let reportInterrupted=false,searchInterrupted=false,requestedPage=0,refreshError=null;
+let performanceCounter=0,performanceController=null,performanceLastLoaded=0;
 const REFRESH_MS=5*60000,CLOCK_MS=30000;
 const visible=()=>active&&!view.hidden&&!root.document.hidden;
 const normalizeQuery=value=>String(value||'').trim().toLocaleLowerCase('en-GB');
@@ -55,6 +56,14 @@ intro.append($('p','Saved candidates require adequate league/home/away samples, 
 const status=$('p','Report not loaded','pb-status');status.setAttribute('role','status');intro.append(status);
 const lifetime=$('details',undefined,'pb-lifetime');lifetime.append($('summary','Lifetime P&L'));
 const summaryBox=$('div',undefined,'pb-dashboard');lifetime.append($('p','All recorded paper bets. Date and search filters below do not change these lifetime totals.','pb-caption'),summaryBox);intro.append(lifetime);
+const performance=$('section',undefined,'card pb-performance');
+performance.append($('h2','Daily paper-bet performance'),$('p','Historical selections grouped by UK match date. Only verified settled outcomes affect net units, ROI and the cumulative P&L line. Unsettled bets remain pending.','pb-caption'));
+const performanceStatus=$('p','Loading historical performance…','pb-caption');
+const performanceMetrics=$('div',undefined,'pb-dashboard');
+const performanceChart=$('div',undefined,'pb-performance-chart');
+const performanceTable=$('div',undefined,'pb-table-wrap pb-history-table');
+performance.append(performanceStatus,performanceMetrics,performanceChart,performanceTable);
+intro.after(performance);
 const candidateSection=$('section',undefined,'card pb-assessments'),candidateTop=$('div',undefined,'pb-top');
 candidateTop.append($('h2',"Today's match assessments"));
 const selector=$('select');selector.setAttribute('aria-label','Show assessments');for(const [value,label] of [['all','All matches'],['candidate','Model candidates'],['no','No bet']]){const o=$('option',label);o.value=value;selector.append(o)}
@@ -106,6 +115,74 @@ function drawMetrics(){
  const tile=$('div',undefined,'pb-metric');tile.append($('small',name),$('strong',value));summaryBox.append(tile);
  }
 }
+
+const performanceNumber=n=>(Number(n)>0?'+':'')+fnum(n);
+function drawPerformance(rows){
+ performanceMetrics.replaceChildren();performanceChart.replaceChildren();performanceTable.replaceChildren();
+ const byDay=new Map();
+ for(const b of rows){
+  const date=b.fixture_date||dates.day(new Date(b.kickoff_at));
+  if(!dates.validDay(date))continue;
+  let d=byDay.get(date);
+  if(!d){d={date,bets:0,settled:0,won:0,lost:0,pending:0,stake:0,net:0};byDay.set(date,d)}
+  d.bets++;
+  if(b.status==='settled'&&Number.isFinite(Number(b.net_units))&&Number.isFinite(Number(b.units))){
+   d.settled++;d.stake+=Number(b.units);d.net+=Number(b.net_units);
+   if(b.won===true)d.won++;else if(b.won===false)d.lost++;
+  }else d.pending++;
+ }
+ const days=[...byDay.values()].sort((a,b)=>a.date.localeCompare(b.date));let cumulative=0;
+ for(const d of days){d.net=Math.round(d.net*100)/100;cumulative=Math.round((cumulative+d.net)*100)/100;d.cumulative=cumulative;d.roi=d.stake?100*d.net/d.stake:null}
+ const all=days.reduce((a,d)=>{a.bets+=d.bets;a.settled+=d.settled;a.won+=d.won;a.lost+=d.lost;a.stake+=d.stake;return a},{bets:0,settled:0,won:0,lost:0,stake:0});
+ const stats=[['Recorded bets',all.bets],['Settled bets',all.settled],['Win rate',all.settled?fnum(all.won/all.settled*100,1)+'%':'—'],['Net units',performanceNumber(cumulative)],['ROI',all.stake?fnum(cumulative/all.stake*100)+'%':'—']];
+ for(const [name,value] of stats){const tile=$('div',undefined,'pb-metric');tile.append($('small',name),$('strong',value));performanceMetrics.append(tile)}
+ if(!days.length){performanceStatus.textContent='No recorded dates yet.';return}
+ performanceStatus.textContent=days.length+' recorded match dates · '+all.settled+' settled of '+all.bets+' bets. ROI uses settled stakes only.';
+ if(all.settled){
+  const width=740,height=210,pad=35,ns='http://www.w3.org/2000/svg',svg=root.document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 '+width+' '+height);svg.setAttribute('role','img');svg.setAttribute('aria-label','Cumulative settled paper-bet net units by match date');svg.style.width='100%';svg.style.height='auto';
+  const points=[{cumulative:0},...days];let min=Math.min(0,...points.map(p=>p.cumulative)),max=Math.max(0,...points.map(p=>p.cumulative));
+  if(max===min){max+=1;min-=1}
+  const x=i=>pad+(width-pad*2)*i/Math.max(1,points.length-1),y=v=>height-pad-(height-2*pad)*(v-min)/(max-min);
+  const axis=root.document.createElementNS(ns,'line');axis.setAttribute('x1',pad);axis.setAttribute('x2',width-pad);axis.setAttribute('y1',y(0));axis.setAttribute('y2',y(0));axis.setAttribute('stroke','#93a6bd');axis.setAttribute('stroke-dasharray','4 5');svg.append(axis);
+  const path=root.document.createElementNS(ns,'polyline');path.setAttribute('points',points.map((d,i)=>x(i)+','+y(d.cumulative)).join(' '));path.setAttribute('fill','none');path.setAttribute('stroke','#70d7ac');path.setAttribute('stroke-width','3');path.setAttribute('stroke-linejoin','round');svg.append(path);
+  const title=root.document.createElementNS(ns,'title');title.textContent='Cumulative P&L: '+performanceNumber(cumulative)+' units over '+days.length+' recorded dates';svg.prepend(title);
+  performanceChart.append(svg,$('p','Cumulative P&L (units) · '+calendarDate(days[0].date)+' to '+calendarDate(days[days.length-1].date),'pb-caption'));
+ }else performanceChart.append($('p','The P&L chart will appear once match results are verified and settled.','pb-caption'));
+ const table=$('table'),head=$('thead'),tr=$('tr'),names=['Date','Bets','Won / lost','Pending','Daily units','ROI','Running units'];
+ for(const name of names){const th=$('th',name);th.scope='col';tr.append(th)}head.append(tr);table.append(head);
+ const body=$('tbody');
+ for(const d of days.slice().reverse()){
+  const row=$('tr'),values=[calendarDate(d.date),d.bets,d.won+' / '+d.lost,d.pending,performanceNumber(d.net),d.roi===null?'—':fnum(d.roi)+'%',performanceNumber(d.cumulative)];
+  values.forEach((value,i)=>{const td=$('td',value);td.setAttribute('data-label',names[i]);if(i===4||i===6)td.className=(i===4?d.net:d.cumulative)<0?'pb-negative':'pb-positive';row.append(td)});
+  row.addEventListener('click',()=>chooseScope(d.date===dates.day(new Date())?'today':'date',d.date));
+  row.style.cursor='pointer';row.title='View saved bets for '+calendarDate(d.date);body.append(row);
+ }
+ table.append(body);performanceTable.append(table);
+}
+async function refreshPerformance(force=false){
+ if(!visible()||(!force&&performanceLastLoaded&&Date.now()-performanceLastLoaded<REFRESH_MS))return;
+ const token=++performanceCounter;
+ if(performanceController)performanceController.abort();
+ const controller=new AbortController();performanceController=controller;
+ performanceStatus.textContent='Updating daily results…';
+ try{
+  const rows=[];let offset=0,total=0;
+  do{
+   const response=await fetch(CLOUD_URL+'/functions/v1/gerball-paper-bets?q=&limit=1000&offset='+offset,{headers:{apikey:CLOUD_KEY},signal:AbortSignal.any([controller.signal,AbortSignal.timeout(30000)])});
+   if(!response.ok)throw Error('History unavailable ('+response.status+')');
+   const data=await response.json();
+   if(data.version!=='paper_search_v1'||!Array.isArray(data.records)||!Number.isInteger(data.total_records)||data.total_records>50000)throw Error('Invalid history response');
+   total=data.total_records;rows.push(...data.records);offset+=data.records.length;
+   if(offset<total&&!data.records.length)throw Error('Incomplete historical results');
+  }while(offset<total);
+  if(token!==performanceCounter||!visible())return;
+  drawPerformance(rows);performanceLastLoaded=Date.now();
+ }catch(error){
+  if(token===performanceCounter&&error.name!=='AbortError')performanceStatus.textContent='Could not load daily performance: '+error.message;
+ }finally{if(token===performanceCounter)performanceController=null}
+}
+
 function quoteAge(p,now){
  const state=dates.priceState(p,now);
  if(state.captureMinutes===null)return state.detail;
@@ -295,7 +372,7 @@ async function load(num=0,{automatic=false}={}){
   if(token!==reportCounter||!visible())return;
   current=data;lastLoadedAt=Date.now();refreshError=null;
   if(!automatic&&page===pageAtStart&&searchQuery===queryAtStart&&ledgerScope===scopeAtStart&&selectedDate===dateAtStart)page=num;
-  drawMetrics();drawCandidates(new Date());drawLedger();
+  drawMetrics();drawCandidates(new Date());drawLedger();refreshPerformance(!automatic);
   if(filteredLedger())await searchLedger(page,{keepExisting:automatic});
  }catch(error){
   if(token!==reportCounter||!visible()||error.name==='AbortError')return;
@@ -354,8 +431,8 @@ downloadButton.addEventListener('click',async()=>{
  }catch(error){status.textContent=error.message}finally{exporting=false;busyButtons()}
 });
 root.addEventListener('gerball:paper-refreshed-prices',()=>{if(current&&visible())drawCandidates(new Date())});
-root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible())checkActivity();else pauseActivity()});
-root.document.addEventListener('visibilitychange',()=>{if(visible())checkActivity();else pauseActivity()});
+root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible()){checkActivity();refreshPerformance()}else pauseActivity()});
+root.document.addEventListener('visibilitychange',()=>{if(visible()){checkActivity();refreshPerformance()}else pauseActivity()});
 root.addEventListener('focus',()=>{if(visible())checkActivity()});
 root.addEventListener('pageshow',()=>{if(visible())checkActivity()});
 if(!view.hidden){active=true;checkActivity()}
