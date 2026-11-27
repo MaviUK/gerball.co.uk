@@ -15,7 +15,7 @@ const configs=[
  {id:'reports',label:'Reports',short:'P&L and diagnostics',caption:'Daily performance, breakdowns and result health'}
 ];
 const select=doc.getElementById('pb-ledger-scope');
-const header=make('header',undefined,'gb-paper-hub-header');
+const header=make('div',undefined,'gb-paper-hub-header');
 const headerTop=make('div',undefined,'gb-paper-hub-heading');
 headerTop.append(make('span','GERBALL / PAPER BETTING LAB','gb-paper-eyebrow'),make('h2','One model at a time.'));
 header.append(headerTop,make('p','Choose a model to view its predictions and records. Switch to Accuracy for V1 versus V2, or Reports for detailed results. No bets are placed on your behalf.','gb-paper-hub-intro'));
