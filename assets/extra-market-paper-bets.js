@@ -47,7 +47,7 @@ function show(report){
  table.append(tbody);tableWrap.append(table);
 }
 async function load(force=false){
- if(view.hidden)return;
+ if(view.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='extra'))return;
  const date=chosenDate(),key=date||'all';
  main.hidden=false;screen.hidden=date!==day();
  if(!force&&last===key&&Date.now()-lastAt<45000)return;
@@ -64,7 +64,7 @@ async function load(force=false){
  if(date===day())loadScreen(force);
 }
 async function loadScreen(force){
- if(view.hidden||screen.hidden)return;
+ if(view.hidden||screen.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='extra'))return;
  if(screenCtrl)screenCtrl.abort();const pending=new AbortController();screenCtrl=pending;
  try{
   const result=await fetchData(endpoint('extra_screen'),pending.signal);
@@ -77,8 +77,9 @@ async function loadScreen(force){
  }catch(e){if(e.name!=='AbortError'&&pending===screenCtrl)screenTitle.textContent='Multi-market screening unavailable'}
  finally{if(pending===screenCtrl)screenCtrl=null}
 }
-function update(){if(view.hidden){main.hidden=true;ctrl?.abort();screenCtrl?.abort();return}load(true)}
+function update(){if(view.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='extra')){main.hidden=true;ctrl?.abort();screenCtrl?.abort();return}load(true)}
 reload.addEventListener('click',()=>load(true));
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='extra')load(true);else{ctrl?.abort();screenCtrl?.abort()}});
 document.getElementById('pb-ledger-scope')?.addEventListener('change',()=>root.setTimeout(update,0));
 document.getElementById('pb-ledger-date')?.addEventListener('change',()=>root.setTimeout(update,0));
 document.querySelector('.pb-day-buttons')?.addEventListener('click',()=>root.setTimeout(update,0));
