@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
 
-  const MARKET_LABELS = Object.freeze({ H: 'Home', D: 'Draw', A: 'Away', O25: 'Over 2.5', U25: 'Under 2.5' });
+  const MARKET_LABELS = Object.freeze({ H: '1', D: 'X', A: '2', O25: 'Over 2.5', U25: 'Under 2.5' });
   const MARKET_GROUPS = Object.freeze({ all: ['H', 'D', 'A', 'O25', 'U25'], h2h: ['H', 'D', 'A'], totals: ['O25', 'U25'] });
   const PAGE_SIZE = 24;
   const MAX_AGE = 5 * 60 * 1000;
@@ -251,7 +251,6 @@
       cell.appendChild(element('span', 'upcoming-bookmaker', price === null ? 'Not captured' : quote.bookmaker_name || 'Bookmaker unavailable'));
       if (price !== null) {
         cell.title = `Provider updated ${formatStamp(quote.source_updated_at)}; captured ${formatStamp(quote.collected_at)}`;
-        cell.appendChild(element('span', 'upcoming-quote-time', timestamp(quote.source_updated_at) === null ? 'Update unknown' : displayTimestamp.format(new Date(timestamp(quote.source_updated_at)))));
       }
       return cell;
     }
@@ -313,11 +312,21 @@
         analysis.setAttribute('aria-label', `Historical match analysis: ${fixture.home?.provider_name || 'Home team'} versus ${fixture.away?.provider_name || 'Away team'}`);
         card.appendChild(analysis);
       }
-      const oddsHeading = element('p', 'upcoming-odds-heading', 'Best captured odds · provider update times shown');
+      const showThreeWay = keys.some(key => ['H', 'D', 'A'].includes(key));
+      const mainKeys = showThreeWay ? ['H', 'D', 'A'] : keys;
+      const oddsHeading = element('p', 'upcoming-odds-heading', showThreeWay ? 'MATCH ODDS   ·   1 = HOME   X = DRAW   2 = AWAY' : 'TOTAL GOALS');
       card.appendChild(oddsHeading);
-      const odds = element('div', `upcoming-odds upcoming-odds-${keys.length}`);
-      for (const key of keys) odds.appendChild(quoteCell(key, fixture.markets && fixture.markets[key]));
+      const odds = element('div', `upcoming-odds upcoming-odds-${mainKeys.length} upcoming-primary-odds`);
+      for (const key of mainKeys) odds.appendChild(quoteCell(key, fixture.markets && fixture.markets[key]));
       card.appendChild(odds);
+      if (showThreeWay && keys.some(key => ['O25', 'U25'].includes(key))) {
+        const totals = element('details', 'upcoming-more-odds');
+        totals.appendChild(element('summary', '', 'Goal odds (over / under 2.5)'));
+        const totalGrid = element('div', 'upcoming-odds upcoming-odds-2');
+        for (const key of ['O25', 'U25']) totalGrid.appendChild(quoteCell(key, fixture.markets && fixture.markets[key]));
+        totals.appendChild(totalGrid);
+        card.appendChild(totals);
+      }
       const quoteTimes = Object.values(fixture.markets || {}).map(quote => quote && timestamp(quote.collected_at)).filter(time => time !== null && Number.isFinite(time));
       if (quoteTimes.length) {
         const captureTime = new Date(Math.max(...quoteTimes)).toISOString();
