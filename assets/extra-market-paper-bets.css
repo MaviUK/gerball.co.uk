@@ -1,0 +1,17 @@
+#paperBets .gb-extra-market{border-left:4px solid #cafa5d!important;background:#112019!important;margin-top:20px}
+#paperBets .gb-extra-header{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}
+#paperBets .gb-extra-header h2{font-family:Impact,"Arial Narrow",system-ui,sans-serif;font-style:italic;letter-spacing:.03em;margin:0!important}
+#paperBets .gb-extra-header button{width:auto}
+#paperBets .gb-extra-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:14px 0 18px}
+#paperBets .gb-extra-stat{min-width:0;background:#1b2a20;padding:13px;border:1px solid #445e47}
+#paperBets .gb-extra-stat small{font-size:11px;color:#b2c5b3;display:block}
+#paperBets .gb-extra-stat strong{font-size:22px;color:#cafa5d;font-variant-numeric:tabular-nums}
+#paperBets .gb-extra-table table{min-width:860px}
+#paperBets .gb-extra-screen{margin-top:20px;border-top:1px solid #425b48;padding-top:16px}
+#paperBets .gb-extra-screen h3{font-size:17px;margin:0 0 6px}
+#paperBets .gb-extra-screen-details summary{color:#cafa5d;cursor:pointer;padding:8px 0}
+#paperBets .gb-extra-screen-counters{display:grid;gap:5px;margin:8px 0}
+#paperBets .gb-extra-screen-line{display:grid;grid-template-columns:minmax(80px,100px) 1fr auto;gap:12px;padding:9px 12px;background:#18281e;border:1px solid #364638;font-size:12px;align-items:center}
+#paperBets .gb-extra-screen-line span{text-transform:capitalize;color:#aebcad}
+@media(max-width:790px){#paperBets .gb-extra-stats{grid-template-columns:repeat(3,minmax(0,1fr))}#paperBets .gb-extra-stat{padding:10px}}
+@media(max-width:420px){#paperBets .gb-extra-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#paperBets .gb-extra-header{align-items:flex-start}}
