@@ -7,6 +7,7 @@
 #paperBets .gb-paper-context{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 #paperBets .gb-paper-context span{font-size:11px;border:1px solid #456347;background:#1b3324;border-radius:30px;padding:6px 10px;color:#c0dcc0}
 #paperBets .gb-paper-tabs{position:sticky;top:calc(var(--app-header-height,112px) + 60px);z-index:24;margin:0 0 14px;background:#101f23f5;border:1px solid #42566b;padding:7px 8px;border-radius:13px;box-shadow:0 7px 22px #0008;backdrop-filter:blur(14px)}
+#paperBets .gb-paper-tab-hint{display:none;margin:3px 4px 1px;text-align:right;font-size:10px;color:#a9c5be}
 #paperBets .gb-paper-tablist{display:flex;gap:6px;align-items:stretch;overflow-x:auto;scrollbar-width:thin;scroll-snap-type:x proximity;padding:2px}
 #paperBets .gb-paper-tab{flex:1 0 132px;width:auto;min-width:130px;min-height:61px;display:flex;flex-direction:column;justify-content:center;text-align:left;align-items:flex-start;gap:2px;padding:10px 12px;background:#192c33;color:#d4e2e9;border:1px solid transparent;border-radius:9px;cursor:pointer;scroll-snap-align:start;white-space:nowrap}
 #paperBets .gb-paper-tab strong{font-size:13px;font-weight:780}
@@ -56,7 +57,7 @@ body.gb-paper-current #viewHero .gb-pitch{display:none}
 body.gb-paper-current #viewHero{padding:8px 2px 12px}
 body.gb-paper-current #viewHero h2{font-size:clamp(23px,3vw,31px);margin:5px 0}
 body.gb-paper-current #viewHero p{font-size:13px}
-@media(max-width:900px){#paperBets .gb-paper-tab{flex:0 0 137px}#paperBets .gb-paper-tabs{top:calc(var(--app-header-height,112px) + 58px)}}
+@media(max-width:900px){#paperBets .gb-paper-tab-hint{display:block}#paperBets .gb-paper-tab{flex:0 0 137px}#paperBets .gb-paper-tabs{top:calc(var(--app-header-height,112px) + 58px)}}
 @media(max-width:620px){
  #paperBets .gb-paper-hub-header{padding:16px;margin-bottom:10px}
  #paperBets .gb-paper-hub-intro{font-size:12px}
