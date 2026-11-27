@@ -88,4 +88,17 @@ jobs:
             raise SystemExit('Incomplete import: expected all 21 leagues without errors')
           if not latest:
             raise SystemExit('Importer returned no completed matches; investigate source feed')
+          import datetime
+          latest_date=datetime.date.fromisoformat(latest)
+          today=datetime.datetime.now(datetime.timezone.utc).astimezone(
+            datetime.timezone.utc).date()
+          max_lag_days=3
+          lag=(today-latest_date).days
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as summary:
+            summary.write(f"- Latest result lag: **{lag} days** (alert after {max_lag_days})\n")
+          if lag>max_lag_days:
+            raise SystemExit(
+              f'Stale source results: last match {latest_date}, {lag} days old. '
+              'Verify football-data.co.uk CSV freshness; paper bets remain pending until verified scores arrive.'
+            )
           PY
