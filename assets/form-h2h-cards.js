@@ -64,7 +64,7 @@ function render(data){
 }
 let active=null,last='',lastAt=0;
 async function load(force=false){
- if(view.hidden){panel.hidden=true;active?.abort();return}
+ if(view.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='v1')){panel.hidden=true;active?.abort();return}
  const date=selected();panel.hidden=!date;if(!date)return;
  if(!force&&date===last&&Date.now()-lastAt<60000)return;
  active?.abort();const ctrl=new AbortController();active=ctrl;refresh.disabled=true;message.textContent='Loading historical H2H · '+date+'…';
@@ -78,6 +78,7 @@ async function load(force=false){
  finally{if(ctrl===active){active=null;refresh.disabled=false}}
 }
 refresh.addEventListener('click',()=>load(true));
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='v1')load(true);else active?.abort()});
 doc.getElementById('pb-ledger-scope')?.addEventListener('change',()=>root.setTimeout(()=>load(true),0));
 doc.getElementById('pb-ledger-date')?.addEventListener('change',()=>root.setTimeout(()=>load(true),0));
 doc.querySelector('.pb-day-buttons')?.addEventListener('click',()=>root.setTimeout(()=>load(true),0));
