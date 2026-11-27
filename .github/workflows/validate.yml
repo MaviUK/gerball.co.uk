@@ -45,6 +45,8 @@ jobs:
         run: node scripts/check-live-extra-markets.mjs
       - name: Verify paper bet clock changes, visibility, refresh and request races
         run: node --test scripts/check-paper-bets-endpoint.mjs scripts/check-paper-bets-lifecycle.mjs
+      - name: Verify P&L dashboard totals, calendar and read-only endpoint
+        run: node --test scripts/check-paper-dashboard-math.mjs scripts/check-paper-dashboard-endpoint.mjs
       - name: Verify isolated today-first bookmaker price comparisons
         run: node scripts/check-live-paper-refreshed-prices.mjs
       - name: Verify saved-price movements and modeled follow-up edge

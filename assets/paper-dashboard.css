@@ -1,0 +1,183 @@
+/* Results-first paper betting workspace. Styles stay inside this page. */
+body.gb-paper-current #viewHero{display:none!important}
+body.gb-paper-current main{padding-top:18px}
+#paperBets{--pnl-ink:#f1f6ed;--pnl-muted:#a7b9ae;--pnl-line:#344b3f;--pnl-surface:#121e18;--pnl-lime:#cafa5d;--pnl-profit:#b8ef79;--pnl-loss:#ff9a86;min-width:0}
+#paperBets .gb-paper-hub-header{padding:0 0 14px;margin:0;border:0;border-radius:0;background:none;gap:0}
+#paperBets .gb-paper-hub-header h2{font-size:clamp(23px,3vw,30px);line-height:1.2;letter-spacing:-.035em;margin:0;color:var(--pnl-ink)}
+#paperBets .gb-paper-hub-header p,#paperBets .gb-paper-hub-header .gb-paper-eyebrow,#paperBets .gb-paper-context,#paperBets .gb-paper-tab-hint{display:none}
+#paperBets .gb-paper-tabs{background:none;border:0;border-bottom:1px solid var(--pnl-line);border-radius:0;padding:0 0 8px;margin:0 0 18px;box-shadow:none!important;backdrop-filter:none}
+#paperBets .gb-paper-tablist{gap:7px;padding:2px 2px 4px;scrollbar-width:thin;scrollbar-color:#4f674e transparent}
+#paperBets .gb-paper-tablist>button.gb-paper-tab,
+#paperBets .gb-paper-tablist>button.gb-paper-tab:not(.nav-item):not(.overview-tile):not(.team-link):not(.table-team-button){flex:0 0 auto;min-width:0;min-height:44px;padding:10px 15px;border-radius:5px!important;background:#14231a!important;border-color:#334a3b!important;color:#c6d6c9!important;justify-content:center;align-items:center;text-align:center!important;white-space:nowrap;line-height:1.25}
+#paperBets .gb-paper-tablist>button.gb-paper-tab strong{font-size:14px;font-weight:750}
+#paperBets .gb-paper-tablist>button.gb-paper-tab small{display:none}
+#paperBets .gb-paper-tablist>button.gb-paper-tab.is-active,
+#paperBets .gb-paper-tablist>button.gb-paper-tab[aria-selected="true"]{background:var(--pnl-lime)!important;border-color:var(--pnl-lime)!important;color:#13200e!important;box-shadow:none!important}
+#paperBets .gb-paper-tablist>button.gb-paper-tab[aria-selected="true"]:not(.nav-item):not(.overview-tile):not(.team-link):not(.table-team-button){background:var(--pnl-lime)!important;border-color:var(--pnl-lime)!important;color:#13200e!important;box-shadow:none!important}
+#paperBets .gb-dashboard-legacy,
+#paperBets[data-paper-dashboard="true"][data-paper-tab="odds"] .gb-paper-toolbar,
+#paperBets[data-paper-dashboard="true"][data-paper-tab="reverse"] .gb-paper-toolbar,
+#paperBets[data-paper-dashboard="true"][data-paper-tab="extra"] .gb-paper-toolbar,
+#paperBets[data-paper-dashboard="true"][data-paper-tab="odds"] .gb-paper-tab-caption,
+#paperBets[data-paper-dashboard="true"][data-paper-tab="reverse"] .gb-paper-tab-caption,
+#paperBets[data-paper-dashboard="true"][data-paper-tab="extra"] .gb-paper-tab-caption{display:none!important}
+#paperBets .gb-pnl-dashboard{display:flex;flex-direction:column;gap:18px;min-width:0;margin-bottom:18px;color:var(--pnl-ink);font-size:16px;line-height:1.5}
+#paperBets .gb-pnl-dashboard [hidden],#paperBets .gb-pnl-dashboard[hidden]{display:none!important}
+#paperBets .gb-pnl-dashboard *{box-sizing:border-box}
+#paperBets .gb-pnl-summary-card,#paperBets .gb-pnl-chart-card,#paperBets .gb-pnl-ledger{padding:22px 24px;margin:0;background:var(--pnl-surface);border:1px solid var(--pnl-line);border-radius:9px;min-width:0}
+#paperBets .gb-pnl-summary-card{background:linear-gradient(115deg,#1c2e1e 0%,#142019 65%);border-top:3px solid var(--pnl-lime)}
+#paperBets .gb-pnl-heading,#paperBets .gb-pnl-chart-head,#paperBets .gb-pnl-ledger-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;min-width:0}
+#paperBets .gb-pnl-heading h2,#paperBets .gb-pnl-chart-head h3,#paperBets .gb-pnl-ledger-head h3{font-size:20px;line-height:1.25;letter-spacing:-.025em;margin:0;color:var(--pnl-ink);border:0;padding:0}
+#paperBets .gb-pnl-subtitle{font-size:14px;color:var(--pnl-muted);margin:5px 0 0;line-height:1.45}
+#paperBets .gb-pnl-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center;justify-content:flex-end}
+#paperBets .gb-pnl-dashboard button:not(.gb-pnl-day){min-height:42px;width:auto;margin:0;padding:9px 13px;border:1px solid #4c664a!important;border-radius:5px!important;background:#203225!important;color:#e4efde!important;font-size:14px!important;font-weight:650!important;line-height:1.3;box-shadow:none!important;cursor:pointer;white-space:nowrap;transition:background .15s ease,border-color .15s ease}
+#paperBets .gb-pnl-dashboard button:not(.gb-pnl-day):hover:not(:disabled){background:#31472b!important;border-color:#a6cf70!important;filter:none}
+#paperBets .gb-pnl-dashboard button[aria-pressed="true"]:not(.gb-pnl-day){background:var(--pnl-lime)!important;color:#152111!important;border-color:var(--pnl-lime)!important}
+#paperBets .gb-pnl-dashboard button:disabled{opacity:.42;cursor:default;filter:none}
+#paperBets .gb-pnl-dashboard button:focus-visible,#paperBets .gb-pnl-dashboard input:focus-visible{outline:2px solid var(--pnl-lime)!important;outline-offset:3px}
+#paperBets .gb-pnl-overview{display:grid;grid-template-columns:minmax(190px,1fr) minmax(0,2.4fr);gap:28px;align-items:center;margin:25px 0 19px;font-variant-numeric:tabular-nums}
+#paperBets .gb-pnl-net{min-width:0}
+#paperBets .gb-pnl-net small,#paperBets .gb-pnl-net>span{display:block;color:#b3c6b7!important;font-size:14px;line-height:1.35;margin-bottom:4px}
+#paperBets .gb-pnl-net>strong{display:block;font-size:clamp(36px,4vw,52px);font-weight:780;letter-spacing:-.055em;line-height:1.1;white-space:nowrap}
+#paperBets .gb-pnl-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));min-width:0}
+#paperBets .gb-pnl-stat{min-width:0;padding:8px 17px;border-left:1px solid #3a503c}
+#paperBets .gb-pnl-stat>span{display:block;color:#aebfaf;font-size:14px;line-height:1.3;margin-bottom:8px}
+#paperBets .gb-pnl-stat>strong{display:block;color:var(--pnl-ink);font-size:clamp(22px,2.4vw,29px);font-weight:730;letter-spacing:-.035em;line-height:1.2;overflow-wrap:anywhere}
+#paperBets .gb-pnl-summary-meta{padding-top:13px;margin:0;border-top:1px solid #344a36;color:var(--pnl-muted);font-size:14px;line-height:1.55}
+#paperBets .gb-pnl-status{margin:8px 0 0;font-size:13px;line-height:1.5;color:#a5b8aa}
+#paperBets .gb-pnl-status:empty{display:none}
+#paperBets .gb-pnl-positive{color:var(--pnl-profit)!important}
+#paperBets .gb-pnl-negative{color:var(--pnl-loss)!important}
+#paperBets .gb-pnl-chart-head{align-items:center;margin-bottom:16px}
+#paperBets .gb-pnl-chart-summary{display:block;font-size:14px;color:var(--pnl-muted);line-height:1.5;margin-top:5px;font-weight:450;letter-spacing:0}
+#paperBets .gb-pnl-month-nav{display:flex;gap:7px;align-items:center;min-width:0}
+#paperBets .gb-pnl-month-nav label{display:flex;flex-direction:column;gap:3px;margin:0;font-size:14px!important;letter-spacing:0!important;text-transform:none!important;line-height:1.3}
+#paperBets .gb-pnl-month-nav label>span{font-size:12px;color:var(--pnl-muted);font-weight:500}
+#paperBets .gb-pnl-dashboard .gb-pnl-month-picker{width:176px;max-width:100%;height:43px;min-width:0;padding:8px 11px;font-size:14px;font-family:inherit;color-scheme:dark;background:#0b1610!important;border:1px solid #4a6249!important;border-radius:5px!important;line-height:1.3;margin:0}
+#paperBets .gb-pnl-month-nav button{flex-shrink:0;min-width:42px;padding-inline:10px}
+#paperBets .gb-pnl-chart-legend{display:flex;flex-wrap:wrap;gap:15px;font-size:13px;color:#afc0b2;margin:0 0 17px;line-height:1.4}
+#paperBets .gb-pnl-chart-legend span{display:inline-flex;gap:6px;align-items:center}
+#paperBets .gb-pnl-chart-legend .gb-pnl-positive::before,#paperBets .gb-pnl-chart-legend .gb-pnl-negative::before{content:"";width:9px;height:9px;border-radius:2px;background:currentColor}
+#paperBets .gb-pnl-chart-legend .is-profit{color:var(--pnl-profit)}
+#paperBets .gb-pnl-chart-legend .is-loss{color:var(--pnl-loss)}
+#paperBets .gb-pnl-chart-legend .is-pending{color:#d1bd79}
+#paperBets .gb-pnl-chart-legend .is-profit::before,#paperBets .gb-pnl-chart-legend .is-loss::before,#paperBets .gb-pnl-chart-legend .is-pending::before{content:"";width:9px;height:9px;border-radius:2px;background:currentColor;flex:0 0 9px}
+#paperBets .gb-pnl-chart-area{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px;min-width:0;margin:8px 0 0}
+#paperBets .gb-pnl-axis{position:relative;height:170px;color:#99ad9e;font-size:14px;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+#paperBets .gb-pnl-axis>span{position:absolute;right:0;top:0;transform:translateY(-3px)}
+#paperBets .gb-pnl-axis>span:nth-child(2){top:50%;transform:translateY(-50%)}
+#paperBets .gb-pnl-axis>span:nth-child(3){top:auto;bottom:0;transform:translateY(3px)}
+#paperBets .gb-pnl-chart-scroll{max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#566b50 #142219;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding-bottom:8px}
+#paperBets .gb-pnl-plot{position:relative;min-width:100%;padding:0;isolation:isolate}
+#paperBets .gb-pnl-plot::before,#paperBets .gb-pnl-plot::after{content:"";position:absolute;left:0;right:0;top:0;border-top:1px dashed #2e4133;pointer-events:none;z-index:0}
+#paperBets .gb-pnl-plot::after{top:170px}
+#paperBets .gb-pnl-zero-line{position:absolute;top:85px;left:0;right:0;height:1px;background:#62765c;pointer-events:none;z-index:0}
+#paperBets .gb-pnl-bars{position:relative;display:grid;grid-template-columns:repeat(var(--days,31),minmax(30px,1fr));gap:0;min-width:0;z-index:1}
+#paperBets .gb-pnl-bars>button.gb-pnl-day{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-width:0;width:100%;min-height:202px;margin:0;padding:0 3px 3px;border:0!important;border-radius:4px!important;background:transparent!important;color:#b7c9b8!important;font-family:inherit;font-size:14px!important;font-weight:500!important;box-shadow:none!important;cursor:pointer;line-height:1.3;position:relative;transition:background .15s ease;filter:none}
+#paperBets .gb-pnl-bars>button.gb-pnl-day:hover:not(:disabled){background:#b8ef7912!important;filter:none}
+#paperBets .gb-pnl-bars>button.gb-pnl-day.is-selected,#paperBets .gb-pnl-bars>button.gb-pnl-day[aria-pressed="true"]{background:#cafa5d17!important;box-shadow:inset 0 0 0 1px #7f9b4a!important}
+#paperBets .gb-pnl-bars>button.gb-pnl-day:focus-visible{outline:2px solid var(--pnl-lime)!important;outline-offset:-2px}
+#paperBets .gb-pnl-track{height:170px;width:100%;display:block;position:relative;flex:0 0 170px}
+#paperBets .gb-pnl-bar{position:absolute;left:12%;right:12%;width:76%;height:var(--bar-height,0px);min-height:0;bottom:50%;background:var(--pnl-profit);border-radius:3px 3px 0 0;display:block}
+#paperBets .gb-pnl-bar.is-negative,#paperBets .is-negative>.gb-pnl-track>.gb-pnl-bar{top:50%;bottom:auto;background:var(--pnl-loss);border-radius:0 0 3px 3px}
+#paperBets .gb-pnl-bar.is-zero,#paperBets .is-zero>.gb-pnl-track>.gb-pnl-bar{height:2px;min-height:2px;bottom:calc(50% - 1px);background:#5b7161;border-radius:1px}
+#paperBets .gb-pnl-bar.is-pending,#paperBets .is-pending>.gb-pnl-track>.gb-pnl-bar{background:#d1bd79;height:3px;min-height:3px;bottom:calc(50% - 1px);border-radius:2px}
+#paperBets .gb-pnl-day-label{display:block;flex:0 0 auto;margin-top:7px;min-height:23px;line-height:23px;text-align:center;border-radius:3px;font-size:14px;font-variant-numeric:tabular-nums}
+#paperBets .gb-pnl-day.is-selected .gb-pnl-day-label,#paperBets .gb-pnl-day[aria-pressed="true"] .gb-pnl-day-label{background:var(--pnl-lime);color:#15200d;font-weight:800}
+#paperBets .gb-pnl-day.is-today:not(.is-selected) .gb-pnl-day-label{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--pnl-lime)}
+#paperBets .gb-pnl-bars>button.gb-pnl-day:disabled{opacity:.3;cursor:default}
+#paperBets .gb-pnl-selection{font-size:14px;line-height:1.5;color:#dfecd8;margin:12px 0 0;min-height:21px}
+#paperBets .gb-pnl-chart-note{font-size:13px;color:#a0b39f;line-height:1.5;margin:6px 0 0}
+#paperBets .gb-pnl-ledger-head{align-items:center;margin-bottom:13px}
+#paperBets .gb-pnl-search{display:flex;flex-direction:column;gap:5px;width:min(340px,45%);font-size:14px;color:var(--pnl-muted);min-width:0;margin:0}
+#paperBets .gb-pnl-search label,#paperBets label.gb-pnl-search{font-size:14px!important;font-weight:500!important;letter-spacing:0!important;text-transform:none!important}
+#paperBets .gb-pnl-search input{width:100%;max-width:100%;min-width:0;min-height:44px;padding:10px 12px;background:#0d1711!important;border:1px solid #4b604a!important;border-radius:5px!important;font-size:16px;font-family:inherit;color:var(--pnl-ink)!important;margin:0}
+#paperBets .gb-pnl-search input::placeholder{color:#839685}
+#paperBets .gb-pnl-list-meta{font-size:13px;color:var(--pnl-muted);line-height:1.5;margin:0 0 15px}
+#paperBets .gb-pnl-bet-list{display:flex;flex-direction:column;min-width:0}
+#paperBets .gb-pnl-bet{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.05fr) minmax(0,.8fr) minmax(0,.85fr);align-items:center;gap:18px;padding:18px 0;min-width:0;border-top:1px solid #304437}
+#paperBets .gb-pnl-bet>div{min-width:0}
+#paperBets .gb-pnl-bet h4{font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.4;margin:0 0 5px;color:#f1f5e9;overflow-wrap:anywhere}
+#paperBets .gb-pnl-bet strong{display:block;font-size:16px;line-height:1.4;font-weight:700}
+#paperBets .gb-pnl-bet small{display:block;font-size:12px;color:#a8b9aa!important;line-height:1.5;margin-top:3px;overflow-wrap:anywhere}
+#paperBets .gb-pnl-bet-result{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px;font-variant-numeric:tabular-nums}
+#paperBets .gb-pnl-bet-result>strong{font-size:20px;line-height:1.2;letter-spacing:-.025em}
+#paperBets .gb-pnl-outcome{display:inline-flex;align-items:center;justify-content:center;width:fit-content;border:1px solid #40553f;border-radius:4px;padding:3px 7px;font-size:14px;font-weight:600;line-height:1.3;color:#c0cdbd;background:#233023}
+#paperBets .gb-pnl-outcome.is-won{color:#c4ee9f;background:#244023;border-color:#48673b}
+#paperBets .gb-pnl-outcome.is-lost{color:#ffb5a4;background:#3b2620;border-color:#775043}
+#paperBets .gb-pnl-outcome.is-pending,#paperBets .gb-pnl-outcome.is-review{color:#e6d799;background:#332f1c;border-color:#635d36}
+#paperBets .gb-pnl-outcome.is-void{color:#c4d0cd;background:#28332e;border-color:#536157}
+#paperBets .gb-pnl-dashboard .gb-pnl-more{display:block;margin:18px auto 0;min-width:180px}
+#paperBets .gb-pnl-empty{padding:25px 18px;margin:5px 0 0;border:1px dashed #40563f;border-radius:6px;background:#0f1b13;font-size:16px;color:#b5c8b2;line-height:1.6;text-align:center}
+#paperBets .gb-pnl-error{padding:13px 16px;border:1px solid #815e43;border-radius:6px;background:#30251a;color:#f3d5b2;font-size:14px;line-height:1.6;margin:10px 0}
+#paperBets .gb-pnl-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important}
+#paperBets .gb-pnl-secondary{min-width:0;margin:0;border:1px solid var(--pnl-line);border-radius:7px;background:#121d17;overflow:hidden}
+#paperBets .gb-pnl-secondary>summary{min-height:47px;padding:12px 16px;color:#dcead6;font-size:14px;line-height:1.5;font-weight:650;cursor:pointer;list-style-position:inside}
+#paperBets .gb-pnl-secondary>summary::marker{color:#cafa5d}
+#paperBets .gb-pnl-secondary>summary:focus-visible{outline:2px solid #cafa5d;outline-offset:-3px}
+#paperBets .gb-pnl-secondary[open]>summary{border-bottom:1px solid var(--pnl-line);background:#1c2d20}
+#paperBets .gb-pnl-secondary>.card{border:0!important;border-radius:0!important;margin:0!important;background:transparent!important;box-shadow:none!important}
+#paperBets .gb-pnl-secondary>.gb-extra-screen{padding:15px 16px;margin:0}
+#paperBets .gb-pnl-secondary .gb-temp-head{gap:12px;flex-wrap:wrap}
+#paperBets .gb-pnl-secondary .gb-temp-head button{width:auto;max-width:100%;min-height:42px;padding:9px 12px;font-size:14px}
+#paperBets .gb-pnl-export{display:flex;justify-content:flex-end;min-width:0;margin:0 0 8px;padding:0}
+#paperBets .gb-pnl-export>button{width:auto;max-width:100%;min-height:44px;padding:10px 14px;background:#213124!important;border:1px solid #496346!important;border-radius:5px!important;color:#d9e7d2!important;font-size:14px;font-weight:600!important;line-height:1.4;white-space:normal}
+#paperBets .gb-pnl-export>button:focus-visible{outline:2px solid #cafa5d;outline-offset:3px}
+#paperBets .gb-pnl-dashboard[aria-busy="true"] .gb-pnl-overview{opacity:.58}
+@media(max-width:850px){
+ #paperBets .gb-pnl-overview{grid-template-columns:1fr;gap:22px;margin-top:21px}
+ #paperBets .gb-pnl-stats{border-top:1px solid #354b38;padding-top:14px}
+ #paperBets .gb-pnl-stat:first-child{border-left:0;padding-left:0}
+ #paperBets .gb-pnl-stat:last-child{padding-right:0}
+ #paperBets .gb-pnl-chart-head{align-items:flex-start}
+ #paperBets .gb-pnl-bet{gap:14px;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,.75fr) minmax(0,.8fr)}
+}
+@media(max-width:620px){
+ body.gb-paper-current main{padding-top:15px}
+ #paperBets .gb-paper-hub-header{padding-bottom:12px}
+ #paperBets .gb-paper-tabs{margin-bottom:14px;padding-bottom:6px}
+ #paperBets .gb-paper-tablist>button.gb-paper-tab{padding:10px 12px;min-height:44px}
+ #paperBets .gb-pnl-dashboard{gap:14px}
+ #paperBets .gb-pnl-summary-card,#paperBets .gb-pnl-chart-card,#paperBets .gb-pnl-ledger{padding:16px 15px!important;border-radius:7px}
+ #paperBets .gb-pnl-heading{gap:13px;flex-wrap:wrap}
+ #paperBets .gb-pnl-heading>div:first-child{flex:1 1 160px}
+ #paperBets .gb-pnl-actions{justify-content:flex-start;gap:6px}
+ #paperBets .gb-pnl-dashboard button:not(.gb-pnl-day){min-height:42px;padding:8px 11px}
+ #paperBets .gb-pnl-heading h2,#paperBets .gb-pnl-chart-head h3,#paperBets .gb-pnl-ledger-head h3{font-size:19px}
+ #paperBets .gb-pnl-overview{gap:16px;margin:18px 0 14px}
+ #paperBets .gb-pnl-net>strong{font-size:44px}
+ #paperBets .gb-pnl-stat{padding:3px 9px}
+ #paperBets .gb-pnl-stat>span{min-height:36px;margin-bottom:5px;font-size:14px;line-height:1.25}
+ #paperBets .gb-pnl-stat>strong{font-size:24px}
+ #paperBets .gb-pnl-summary-meta{font-size:13px;padding-top:11px}
+ #paperBets .gb-pnl-chart-head{flex-direction:column;gap:15px;margin-bottom:14px}
+ #paperBets .gb-pnl-month-nav{width:100%;justify-content:space-between;gap:6px}
+ #paperBets .gb-pnl-month-nav label{min-width:0;flex:1}
+ #paperBets .gb-pnl-dashboard .gb-pnl-month-picker{width:100%;min-width:0;text-align:center}
+ #paperBets .gb-pnl-month-nav button{min-width:42px;flex:0 0 auto}
+ #paperBets .gb-pnl-chart-area{grid-template-columns:37px minmax(0,1fr);gap:5px}
+ #paperBets .gb-pnl-chart-legend{gap:12px;margin-bottom:16px}
+ #paperBets .gb-pnl-selection{font-size:14px;margin-top:10px}
+ #paperBets .gb-pnl-ledger-head{flex-direction:column;align-items:stretch;gap:13px}
+ #paperBets .gb-pnl-search{width:100%}
+ #paperBets .gb-pnl-bet{grid-template-columns:minmax(0,1fr) minmax(70px,.55fr);gap:11px 14px;padding:17px 0}
+ #paperBets .gb-pnl-bet-fixture{grid-column:1;grid-row:1}
+ #paperBets .gb-pnl-bet-result{grid-column:2;grid-row:1;align-self:start;padding-top:1px}
+ #paperBets .gb-pnl-bet-selection{grid-column:1;grid-row:2}
+ #paperBets .gb-pnl-bet-stake{grid-column:2;grid-row:2;text-align:right}
+ #paperBets .gb-pnl-bet h4{font-size:16px;margin-bottom:4px}
+ #paperBets .gb-pnl-bet-selection>strong,#paperBets .gb-pnl-bet-stake>strong{font-size:14px}
+ #paperBets .gb-pnl-list-meta{margin-bottom:11px}
+ #paperBets .gb-pnl-empty{padding:21px 14px}
+}
+@media(max-width:360px){
+ #paperBets .gb-pnl-summary-card,#paperBets .gb-pnl-chart-card,#paperBets .gb-pnl-ledger{padding:14px 12px!important}
+ #paperBets .gb-pnl-stat{padding-inline:6px}
+ #paperBets .gb-pnl-stat>strong{font-size:21px}
+ #paperBets .gb-pnl-dashboard .gb-pnl-month-picker{font-size:13px;padding-inline:4px}
+ #paperBets .gb-pnl-month-nav button{padding-inline:8px;font-size:13px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #paperBets .gb-pnl-dashboard button{transition:none!important}
+ #paperBets .gb-pnl-chart-scroll{scroll-behavior:auto}
+}

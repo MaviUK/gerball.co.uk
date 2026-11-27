@@ -16,13 +16,6 @@ const configs=[
  {id:'reports',label:'Reports',short:'P&L and diagnostics',caption:'Daily performance, breakdowns and result health'}
 ];
 const select=doc.getElementById('pb-ledger-scope');
-const header=make('div',undefined,'gb-paper-hub-header');
-const headerTop=make('div',undefined,'gb-paper-hub-heading');
-headerTop.append(make('span','GERBALL / PAPER BETTING LAB','gb-paper-eyebrow'),make('h2','One model at a time.'));
-header.append(headerTop,make('p','Choose a model to view its predictions and records. Switch to Accuracy for V1 versus V2, or Reports for detailed results. No bets are placed on your behalf.','gb-paper-hub-intro'));
-const context=make('div',undefined,'gb-paper-context');
-for(const label of ['Research-only bets','Saved records unchanged','UK match dates'])context.append(make('span',label));
-header.append(context);
 const tabs=make('nav',undefined,'gb-paper-tabs');tabs.setAttribute('aria-label','Paper betting models');
 const tablist=make('div',undefined,'gb-paper-tablist');tablist.setAttribute('role','tablist');tablist.setAttribute('aria-label','Choose a paper betting model');
 const panels=make('div',undefined,'gb-paper-panels');
@@ -30,14 +23,14 @@ const buttonMap=new Map(),paneMap=new Map();
 for(const c of configs){
  const button=make('button',undefined,'gb-paper-tab');button.type='button';button.id='gb-paper-tab-'+c.id;
  button.setAttribute('role','tab');button.setAttribute('aria-controls','gb-paper-pane-'+c.id);
- button.append(make('strong',c.label),make('small',c.short));
+ button.append(make('strong',c.label));button.title=c.caption;
  tablist.append(button);buttonMap.set(c.id,button);
  const pane=make('section',undefined,'gb-paper-pane');
  pane.id='gb-paper-pane-'+c.id;pane.setAttribute('role','tabpanel');
  pane.setAttribute('aria-labelledby',button.id);pane.setAttribute('tabindex','0');
  pane.hidden=true;panels.append(pane);paneMap.set(c.id,pane);
 }
-tabs.append(tablist,make('p','Swipe sideways to see all models','gb-paper-tab-hint'));
+tabs.append(tablist);
 const toolbar=make('section',undefined,'gb-paper-toolbar');
 const toolbarTop=make('div',undefined,'gb-paper-toolbar-top');
 toolbarTop.append(make('strong','Match date'),make('span','Shared across the betting models · UK time'));
@@ -99,7 +92,7 @@ if(!extraSection)extra.append(make('p','Extended-market records are currently un
 if(!v1Section)v1.append(make('p','V1 predictions are currently unavailable.','gb-paper-notice'));
 if(!v2Section)v2.append(make('p','V2 predictions are currently unavailable.','gb-paper-notice'));
 if(!accuracySection)accuracy.append(make('p','The model comparison is currently unavailable.','gb-paper-notice'));
-host.prepend(header,tabs,toolbar,tabCaption,panels);
+host.prepend(tabs,toolbar,tabCaption,panels);
 host.dataset.paperTabsReady='true';
 function valid(id){return paneMap.has(id)?id:'odds'}
 function initial(){
@@ -122,7 +115,7 @@ function scopeNotice(){
  alert.hidden=!(history&&['reverse','v1'].includes(tab));
  alert.textContent=history?'Complete history is selected. Some fixture-level views need an individual date.':'';
  details.hidden=select?.value==='history'||doc.getElementById('pb-ledger-date')?.value!==root.GerballPaperDates?.day(new Date());
- toolbar.hidden=tab==='accuracy'||tab==='reports';
+ toolbar.hidden=['accuracy','reports','backtest'].includes(tab);
 }
 function activate(next,remember=true,focus=false){
  const id=valid(next),previous=host.dataset.paperTab;
