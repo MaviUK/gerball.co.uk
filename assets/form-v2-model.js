@@ -66,7 +66,7 @@ function render(report){
 }
 let running=null,lastDate='',loadedAt=0;
 async function load(force=false){
- if(view.hidden){section.hidden=true;running?.abort();return}
+ if(view.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='v2')){section.hidden=true;running?.abort();return}
  const chosen=date();section.hidden=false;
  if(!force&&lastDate===(chosen||'all')&&Date.now()-loadedAt<45000)return;
  running?.abort();const ctrl=new AbortController();running=ctrl;refresh.disabled=true;status.textContent='Loading V2 historical predictions…';
@@ -83,6 +83,7 @@ async function load(force=false){
  finally{if(running===ctrl){running=null;refresh.disabled=false}}
 }
 refresh.addEventListener('click',()=>load(true));
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='v2')load(true);else running?.abort()});
 doc.getElementById('pb-ledger-scope')?.addEventListener('change',()=>root.setTimeout(()=>load(true),0));
 doc.getElementById('pb-ledger-date')?.addEventListener('change',()=>root.setTimeout(()=>load(true),0));
 root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks')load(true);else{section.hidden=true;running?.abort()}});
