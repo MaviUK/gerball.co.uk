@@ -44,7 +44,30 @@ jobs:
             raise SystemExit(f'Importer HTTP {exc.code}: {exc.read(500).decode(errors="replace")}')
           rows=result.get('summary',[])
           failures=[r for r in rows if 'error' in r]
-          print(json.dumps({'season':'2627','leagues':len(rows),'matches_upserted':sum(r.get('saved',0) for r in rows),'failures':failures},indent=2))
+          successes=[r for r in rows if 'error' not in r]
+          latest=max((r.get('latest_result_date') or '' for r in successes),default='')
+          recent=sum(r.get('results_last_7_days',0) for r in successes)
+          report={
+            'season':'2627',
+            'leagues':len(rows),
+            'matches_upserted':sum(r.get('saved',0) for r in successes),
+            'latest_result_date':latest or None,
+            'results_last_7_days':recent,
+            'league_details':rows,
+            'failures':failures,
+          }
+          print(json.dumps(report,indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as summary:
+            summary.write('## Gerball football results import\\n')
+            summary.write(f"- Latest completed match: **{latest or 'none'}**\\n")
+            summary.write(f"- Results dated within the last 7 days: **{recent}**\\n")
+            summary.write(f"- Leagues processed: **{len(rows)}**; failures: **{len(failures)}**\\n")
+            if failures:
+              summary.write('\\n### Failed leagues\\n')
+              for r in failures:
+                summary.write(f"- {r.get('league','unknown')}: {r.get('error','unknown error')}\\n")
           if len(rows)!=21 or failures:
             raise SystemExit('Incomplete import: expected all 21 leagues without errors')
+          if not latest:
+            raise SystemExit('Importer returned no completed matches; investigate source feed')
           PY
