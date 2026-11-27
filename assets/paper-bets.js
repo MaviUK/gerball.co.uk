@@ -63,7 +63,7 @@ const performanceMetrics=$('div',undefined,'pb-dashboard');
 const performanceChart=$('div',undefined,'pb-performance-chart');
 const performanceTable=$('div',undefined,'pb-table-wrap pb-history-table');
 performance.append(performanceStatus,performanceMetrics,performanceChart,performanceTable);
-intro.after(performance);
+
 const candidateSection=$('section',undefined,'card pb-assessments'),candidateTop=$('div',undefined,'pb-top');
 candidateTop.append($('h2',"Today's match assessments"));
 const selector=$('select');selector.setAttribute('aria-label','Show assessments');for(const [value,label] of [['all','All matches'],['candidate','Model candidates'],['no','No bet']]){const o=$('option',label);o.value=value;selector.append(o)}
@@ -83,7 +83,7 @@ const daySummaryNote=$('p','','pb-caption pb-day-summary-note');ledger.append(da
 const ledgerStatus=$('p','','pb-caption');ledgerStatus.setAttribute('role','status');ledger.append(ledgerStatus);
 const scroll=$('div',undefined,'pb-table-wrap pb-history-table');ledger.append(scroll);
 const pagination=$('div',undefined,'pb-controls');const newer=$('button','Previous page','secondary'),older=$('button','Next page','secondary');newer.type=older.type='button';pagination.append(newer,older);ledger.append(pagination);
-holder.append(intro,ledger,candidateSection);
+holder.append(intro,performance,ledger,candidateSection);
 let page=0;const PAGE=250;
 const filteredLedger=()=>ledgerScope!=='history'||searchQuery!=='';
 function ledgerPath(limit,offset,scope=ledgerScope,query=searchQuery,date=selectedDate){
