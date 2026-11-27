@@ -1,0 +1,29 @@
+#paperBets .gb-backtest-lead{border:1px solid #4c684f;background:#14291c;border-radius:12px;padding:20px}
+#paperBets .gb-backtest-label{font:800 11px ui-monospace,monospace;letter-spacing:.1em;color:#ceef9b}
+#paperBets .gb-backtest-lead h2{font-size:clamp(22px,3vw,29px);margin:7px 0}
+#paperBets .gb-backtest-flags{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+#paperBets .gb-backtest-flags span{font-size:10px;border:1px solid #47614c;border-radius:24px;padding:6px 10px;color:#d7e9d3}
+#paperBets .gb-backtest-controls{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;border:1px solid #355044;background:#14221d;border-radius:12px;padding:13px}
+#paperBets .gb-backtest-filter{display:grid;gap:5px;min-width:145px;font-size:11px;color:#bfd5c1}
+#paperBets .gb-backtest-filter select{background:#26382d;color:#efffea;border:1px solid #58775c;padding:10px;border-radius:7px;min-height:42px}
+#paperBets .gb-backtest-controls button{width:auto;min-height:42px}
+#paperBets .gb-backtest-progress{padding:13px;background:#1a2c20;border:1px solid #3d5943;border-radius:10px}
+#paperBets .gb-backtest-track{background:#344c37;overflow:hidden;border-radius:12px;height:8px}
+#paperBets .gb-backtest-fill{background:#cafa5d;height:100%}
+#paperBets .gb-backtest-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#paperBets .gb-backtest-card{padding:15px;background:#192c22;border:1px solid #47614c;border-radius:12px;min-width:0}
+#paperBets .gb-backtest-card h3{font-size:17px;margin:0 0 12px}
+#paperBets .gb-backtest-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+#paperBets .gb-backtest-metric{padding:10px 8px;background:#22372a;min-width:0}
+#paperBets .gb-backtest-metric small{display:block;font-size:10px;color:#b4c8b6}
+#paperBets .gb-backtest-metric strong{display:block;font-size:18px;color:#e3fac9;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#paperBets .gb-bt-negative strong{color:#ffa7a7}
+#paperBets .gb-bt-positive strong{color:#cafa5d}
+#paperBets .gb-backtest-seasons,#paperBets .gb-backtest-daily,#paperBets .gb-backtest-bets{background:#12231d;border:1px solid #395644;border-radius:10px;padding:14px;min-width:0}
+#paperBets .gb-backtest-seasons h3,#paperBets .gb-backtest-daily h3,#paperBets .gb-backtest-bets h3{font-size:18px;margin:0 0 10px}
+#paperBets .gb-backtest-scroll{max-width:100%;overflow-x:auto}
+#paperBets .gb-backtest-scroll table{min-width:720px;font-variant-numeric:tabular-nums}
+#paperBets .gb-backtest-bets .gb-backtest-scroll table{min-width:1180px}
+#paperBets .gb-backtest-more{width:auto;margin:14px 0 0}
+@media(max-width:1050px){#paperBets .gb-backtest-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){#paperBets .gb-backtest-summary{grid-template-columns:1fr}#paperBets .gb-backtest-controls{align-items:stretch}#paperBets .gb-backtest-filter{flex:1 1 130px}#paperBets .gb-backtest-controls button{flex:1 0 100%}}
