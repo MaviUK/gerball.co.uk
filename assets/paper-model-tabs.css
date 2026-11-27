@@ -28,8 +28,8 @@
 #paperBets .gb-paper-tab-caption{margin:0 0 12px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;color:#cbded4}
 #paperBets .gb-paper-tab-caption strong{font-size:17px}
 #paperBets .gb-paper-tab-caption span{font-size:12px;color:#aebcbd}
-#paperBets .gb-paper-pane{display:flex;flex-direction:column;gap:15px;min-width:0}
-#paperBets .gb-paper-pane[hidden],#paperBets .gb-paper-toolbar[hidden],#paperBets .gb-paper-notice[hidden],#paperBets .gb-paper-assessments[hidden]{display:none!important}
+#paperBets .gb-paper-pane{display:flex;flex-direction:column;gap:15px;min-width:0;margin:0}
+#paperBets .gb-paper-pane[hidden],#paperBets .gb-paper-toolbar[hidden],#paperBets .gb-paper-notice[hidden],#paperBets .gb-paper-assessments[hidden],#paperBets .gb-paper-h2h-details[hidden]{display:none!important}
 #paperBets .gb-paper-pane>.card,#paperBets .gb-paper-pane>.gb-paper-assessments{margin:0!important;min-width:0}
 #paperBets .gb-paper-pane>.card{border-radius:14px}
 #paperBets .gb-paper-pane .pb-top h2{font-size:clamp(19px,2.6vw,25px)}
