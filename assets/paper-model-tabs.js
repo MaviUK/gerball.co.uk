@@ -36,7 +36,7 @@ for(const c of configs){
  pane.setAttribute('aria-labelledby',button.id);pane.setAttribute('tabindex','0');
  pane.hidden=true;panels.append(pane);paneMap.set(c.id,pane);
 }
-tabs.append(tablist);
+tabs.append(tablist,make('p','Swipe sideways to see all models','gb-paper-tab-hint'));
 const toolbar=make('section',undefined,'gb-paper-toolbar');
 const toolbarTop=make('div',undefined,'gb-paper-toolbar-top');
 toolbarTop.append(make('strong','Match date'),make('span','Shared across the betting models · UK time'));
