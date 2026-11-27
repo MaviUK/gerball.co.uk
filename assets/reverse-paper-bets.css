@@ -1,0 +1,11 @@
+#paperBets .gb-reverse{border-left:4px solid #cafa5d!important;margin-top:20px}
+#paperBets .gb-reverse h2{margin:0}
+#paperBets .gb-reverse-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:16px 0}
+#paperBets .gb-reverse-metric{min-width:0;padding:13px;background:#19281e;border:1px solid #475944}
+#paperBets .gb-reverse-metric small{display:block;font-size:11px;color:#b2c4b1}
+#paperBets .gb-reverse-metric strong{display:block;font-size:23px;font-variant-numeric:tabular-nums;color:#cafa5d}
+#paperBets .gb-reverse-table{overflow:auto}
+#paperBets .gb-reverse-table table{min-width:820px}
+#paperBets .gb-reverse-table td{font-size:12px}
+@media(max-width:760px){#paperBets .gb-reverse-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}#paperBets .gb-reverse-metric{padding:10px}#paperBets .gb-reverse-metric strong{font-size:20px}}
+@media(max-width:430px){#paperBets .gb-reverse-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
