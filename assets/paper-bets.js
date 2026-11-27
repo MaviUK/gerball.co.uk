@@ -17,6 +17,7 @@ const recordsCSV=rows=>{const cols=['id','model_version','league','home','away',
 const download=(content,filename)=>{const b=new Blob([content],{type:'text/csv;charset=utf-8'});const u=URL.createObjectURL(b);const a=$('a');a.href=u;a.download=filename;root.document.body.append(a);a.click();a.remove();root.setTimeout(()=>URL.revokeObjectURL(u),1500)};
 let active=false,loading=false,current=null,filter='all',priceFilter='all',exporting=false,ledgerScope='today';
 let selectedDate=dates.day(new Date()),ledgerError=null;
+let fixturesController=null,fixturesCounter=0,fixturesLastKey='';
 let searchQuery='',searchResult=null,searchCounter=0,searchTimer=null,searchController=null;
 let reportCounter=0,reportController=null,activityTimer=null,lastLoadedAt=null,lastAttemptAt=null,lastAttemptDay=null;
 let reportInterrupted=false,searchInterrupted=false,requestedPage=0,refreshError=null;
@@ -64,6 +65,11 @@ const performanceChart=$('div',undefined,'pb-performance-chart');
 const performanceTable=$('div',undefined,'pb-table-wrap pb-history-table');
 performance.append(performanceStatus,performanceMetrics,performanceChart,performanceTable);
 
+const fixturesPanel=$('section',undefined,'card pb-date-fixtures');
+const fixturesHeading=$('h2','Matches on selected date');
+const fixturesStatus=$('p','Choose a day to see its recorded fixtures and results.','pb-caption');
+const fixturesWrap=$('div',undefined,'pb-table-wrap pb-history-table');
+fixturesPanel.append(fixturesHeading,fixturesStatus,fixturesWrap);
 const candidateSection=$('section',undefined,'card pb-assessments'),candidateTop=$('div',undefined,'pb-top');
 candidateTop.append($('h2',"Today's match assessments"));
 const selector=$('select');selector.setAttribute('aria-label','Show assessments');for(const [value,label] of [['all','All matches'],['candidate','Model candidates'],['no','No bet']]){const o=$('option',label);o.value=value;selector.append(o)}
@@ -83,7 +89,7 @@ const daySummaryNote=$('p','','pb-caption pb-day-summary-note');ledger.append(da
 const ledgerStatus=$('p','','pb-caption');ledgerStatus.setAttribute('role','status');ledger.append(ledgerStatus);
 const scroll=$('div',undefined,'pb-table-wrap pb-history-table');ledger.append(scroll);
 const pagination=$('div',undefined,'pb-controls');const newer=$('button','Previous page','secondary'),older=$('button','Next page','secondary');newer.type=older.type='button';pagination.append(newer,older);ledger.append(pagination);
-holder.append(intro,performance,ledger,candidateSection);
+holder.append(intro,performance,fixturesPanel,ledger,candidateSection);
 let page=0;const PAGE=250;
 const filteredLedger=()=>ledgerScope!=='history'||searchQuery!=='';
 function ledgerPath(limit,offset,scope=ledgerScope,query=searchQuery,date=selectedDate){
@@ -94,6 +100,7 @@ function syncDateControls(now=new Date()){
  if(ledgerScope==='today'&&selectedDate!==today){selectedDate=today;page=0;searchResult=null;ledgerError=null;cancelSearch();searchInterrupted=true;if(current)drawLedger()}
  dateInput.max=today;dateInput.value=selectedDate;scopeSelect.value=ledgerScope;
  dateControls.hidden=ledgerScope==='history';
+ fixturesPanel.hidden=ledgerScope==='history';
  previousDay.disabled=selectedDate==='0001-01-01';nextDay.disabled=selectedDate>=today;todayButton.disabled=ledgerScope==='today';
  candidateSection.hidden=ledgerScope==='history'||selectedDate!==today;
 }
@@ -240,6 +247,49 @@ function drawCandidates(now=new Date()){
  for(const p of source.slice(0,72))cards.append(matchCard(p,now));
  if(source.length>72)cards.append($('p','Showing 72 of '+source.length+' matching fixtures.','pb-caption'));
 }
+function clearFixtureRequest(){
+ fixturesCounter++;if(fixturesController)fixturesController.abort();fixturesController=null;
+}
+async function loadDayFixtures(force=false){
+ if(!visible())return;
+ if(ledgerScope==='history'){clearFixtureRequest();fixturesPanel.hidden=true;return}
+ fixturesPanel.hidden=false;
+ const date=ledgerScope==='today'?dates.day(new Date()):selectedDate;
+ const key=date;
+ if(!force&&fixturesLastKey===key)return;
+ const token=++fixturesCounter;
+ if(fixturesController)fixturesController.abort();
+ const controller=new AbortController();fixturesController=controller;
+ fixturesHeading.textContent='Matches · '+calendarDate(date);
+ fixturesStatus.textContent='Loading matches for '+calendarDate(date)+'…';
+ fixturesWrap.replaceChildren();
+ try{
+  const response=await fetch(CLOUD_URL+'/functions/v1/gerball-paper-bets?scope=fixtures&date='+encodeURIComponent(date),{headers:{apikey:CLOUD_KEY},signal:AbortSignal.any([controller.signal,AbortSignal.timeout(30000)])});
+  if(!response.ok)throw Error('Match history unavailable ('+response.status+')');
+  const result=await response.json();
+  if(result?.version!=='gerball_day_fixtures_v1'||result.date!==date||!Array.isArray(result.matches))throw Error('Invalid match history');
+  if(token!==fixturesCounter||!visible()||ledgerScope==='history')return;
+  fixturesLastKey=key;
+  fixturesStatus.textContent=result.total+' recorded matches · '+result.results_available+' final results available. Missing scores stay marked awaiting import.';
+  if(!result.matches.length){fixturesWrap.append($('p','No fixtures have been recorded for this date.','pb-caption'));return}
+  const table=$('table'),head=$('thead'),headingRow=$('tr');
+  const labels=['Kickoff','League','Match','Score','Result','Paper bet'];
+  for(const label of labels){const th=$('th',label);th.scope='col';headingRow.append(th)}
+  head.append(headingRow);table.append(head);
+  const body=$('tbody');
+  for(const m of result.matches){
+   const row=$('tr'),hasResult=m.result!==null&&m.home_goals!==null&&m.away_goals!==null;
+   const selections=Array.isArray(m.paper_bets)?m.paper_bets:[];
+   const values=[m.kickoff_at?textDate(m.kickoff_at):'Time not recorded',m.league||'—',(m.home||'?')+' v '+(m.away||'?'),hasResult?m.home_goals+'–'+m.away_goals:'—',hasResult?(m.result==='H'?'Home win':m.result==='A'?'Away win':'Draw'):'Awaiting imported result',selections.length?selections.map(b=>(marketNames[b.market]||b.market)+' · '+b.units+'u @ '+fnum(b.odds)).join('; '):'None'];
+   values.forEach((v,i)=>{const td=$('td',v);td.setAttribute('data-label',labels[i]);if(i===3&&hasResult)td.className='pb-positive';row.append(td)});
+   body.append(row);
+  }
+  table.append(body);fixturesWrap.append(table);
+ }catch(e){
+  if(token===fixturesCounter&&e.name!=='AbortError')fixturesStatus.textContent='Could not load matches: '+e.message;
+ }finally{if(token===fixturesCounter)fixturesController=null}
+}
+
 function drawLedger(){
  scroll.replaceChildren();
  const filtered=filteredLedger(),daily=ledgerScope!=='history';
@@ -372,7 +422,7 @@ async function load(num=0,{automatic=false}={}){
   if(token!==reportCounter||!visible())return;
   current=data;lastLoadedAt=Date.now();refreshError=null;
   if(!automatic&&page===pageAtStart&&searchQuery===queryAtStart&&ledgerScope===scopeAtStart&&selectedDate===dateAtStart)page=num;
-  drawMetrics();drawCandidates(new Date());drawLedger();refreshPerformance(!automatic);
+  drawMetrics();drawCandidates(new Date());drawLedger();refreshPerformance(!automatic);loadDayFixtures(!automatic);
   if(filteredLedger())await searchLedger(page,{keepExisting:automatic});
  }catch(error){
   if(token!==reportCounter||!visible()||error.name==='AbortError')return;
@@ -403,7 +453,7 @@ function chooseScope(scope,date=selectedDate){
  }
  ledgerScope=scope;selectedDate=date;page=0;searchResult=null;ledgerError=null;cancelSearch();searchInterrupted=filteredLedger();
  dateMessage.textContent='Dates follow the match kickoff in UK time.';syncDateControls();
- if(current&&visible()){drawLedger();if(filteredLedger())searchLedger(0);else load(0)}
+ if(current&&visible()){drawLedger();loadDayFixtures(true);if(filteredLedger())searchLedger(0);else load(0)}
  scheduleActivity();
 }
 function chooseDay(value){chooseScope(value===dates.day(new Date())?'today':'date',value)}
@@ -431,8 +481,8 @@ downloadButton.addEventListener('click',async()=>{
  }catch(error){status.textContent=error.message}finally{exporting=false;busyButtons()}
 });
 root.addEventListener('gerball:paper-refreshed-prices',()=>{if(current&&visible())drawCandidates(new Date())});
-root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible()){checkActivity();refreshPerformance()}else pauseActivity()});
-root.document.addEventListener('visibilitychange',()=>{if(visible()){checkActivity();refreshPerformance()}else pauseActivity()});
+root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible()){checkActivity();refreshPerformance();loadDayFixtures()}else{pauseActivity();clearFixtureRequest()}});
+root.document.addEventListener('visibilitychange',()=>{if(visible()){checkActivity();refreshPerformance();loadDayFixtures()}else{pauseActivity();clearFixtureRequest()}});
 root.addEventListener('focus',()=>{if(visible())checkActivity()});
 root.addEventListener('pageshow',()=>{if(visible())checkActivity()});
 if(!view.hidden){active=true;checkActivity()}
