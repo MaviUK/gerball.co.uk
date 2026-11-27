@@ -56,10 +56,17 @@ jobs:
             'x-edgelab-import-token':os.environ['IMPORT_TOKEN']
           })
           try:
-            with urllib.request.urlopen(req, timeout=600) as response:
+            with urllib.request.urlopen(req,timeout=450) as response:
               result=json.load(response)
           except urllib.error.HTTPError as exc:
-            raise SystemExit(f'Importer HTTP {exc.code}: {exc.read(500).decode(errors="replace")}')
+            detail=exc.read(500).decode(errors='replace')
+            if exc.code in (401,403):
+              raise SystemExit(f'Importer credentials rejected (HTTP {exc.code}): {detail}')
+            print(f'Full-season import failed (HTTP {exc.code}); recovering by league: {detail}')
+            result={'summary':[]}
+          except (TimeoutError,urllib.error.URLError,ValueError) as exc:
+            print('Full-season import failed; recovering by league:',str(exc))
+            result={'summary':[]}
           rows=result.get('summary',[])
           expected_leagues={'E0','E1','E2','E3','SC0','SC1','SC2','SC3','D1','D2','I1','I2','SP1','SP2','F1','F2','N1','B1','P1','G1','T1'}
           if not isinstance(rows,list):
