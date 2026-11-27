@@ -153,3 +153,9 @@
 #paperBets .pb-coverage-empty{border:1px dashed #3c5670;border-radius:10px;padding:17px;font-size:.875rem;line-height:1.6;color:#c4d8e9}
 #paperBets .pb-coverage select:focus-visible,#paperBets .pb-coverage .pb-table-wrap:focus-visible{outline:2px solid #81d9b4;outline-offset:3px}
 @media(max-width:760px){#paperBets .pb-coverage-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#paperBets .pb-coverage-controls{gap:12px}#paperBets .pb-coverage-field{flex:1 1 200px}#paperBets .pb-coverage-field select{max-width:none}}
+
+/* Match list defaults to paper-bet fixtures; full fixture browser is optional. */
+#paperBets .pb-date-fixtures .pb-top{align-items:center;margin-bottom:8px}
+#paperBets .pb-date-fixtures .pb-top h2{margin:0}
+#paperBets #pb-fixtures-mode{width:auto;max-width:100%;min-width:210px;background:#18281e!important;border:1px solid #62754d!important;color:#e9f5de!important;font-size:12px!important}
+@media(max-width:600px){#paperBets .pb-date-fixtures .pb-top{align-items:stretch}#paperBets #pb-fixtures-mode{width:100%;min-width:0}}
