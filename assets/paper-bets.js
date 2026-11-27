@@ -170,6 +170,7 @@ function drawPerformance(rows){
  table.append(body);performanceTable.append(table);
 }
 async function refreshPerformance(force=false){
+ if(holder.dataset.paperTab&&holder.dataset.paperTab!=='reports')return;
  if(!visible()||(!force&&performanceLastLoaded&&Date.now()-performanceLastLoaded<REFRESH_MS))return;
  const token=++performanceCounter;
  if(performanceController)performanceController.abort();
@@ -426,6 +427,7 @@ function scheduleActivity(){
  activityTimer=root.setTimeout(()=>{activityTimer=null;checkActivity()},Math.max(1,delay));
 }
 function checkActivity(){
+ if(holder.dataset.paperTab==='reports'){pauseActivity();return}
  if(!visible()){pauseActivity();return}
  const now=new Date();drawCurrent(now);
  if(current)loadDayFixtures();
@@ -463,6 +465,7 @@ async function searchLedger(num=0,{keepExisting=false}={}){
  }finally{if(token===searchCounter)searchController=null}
 }
 async function load(num=0,{automatic=false}={}){
+ if(holder.dataset.paperTab&&holder.dataset.paperTab!=='odds')return;
  if(!visible())return;
  const token=++reportCounter,queryAtStart=searchQuery,scopeAtStart=ledgerScope,dateAtStart=selectedDate,pageAtStart=page,reportPage=filteredLedger()?0:num;
  if(reportController)reportController.abort();
@@ -534,10 +537,11 @@ downloadButton.addEventListener('click',async()=>{
 });
 root.addEventListener('gerball:paper-refreshed-prices',()=>{if(current&&visible())drawCandidates(new Date())});
  root.addEventListener('gerball:paper-tabchange',e=>{
-  if(['odds','reports'].includes(e.detail?.tab)){
-   active=!view.hidden;checkActivity();
-   if(e.detail.tab==='reports')refreshPerformance();
-   if(e.detail.tab==='odds')loadDayFixtures();
+  active=!view.hidden;
+  if(e.detail?.tab==='odds'){
+   load(0);checkActivity();loadDayFixtures();
+  }else if(e.detail?.tab==='reports'){
+   pauseActivity();clearFixtureRequest();refreshPerformance();
   }else{pauseActivity();clearFixtureRequest()}
  });
 root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible()){checkActivity();refreshPerformance();loadDayFixtures()}else{pauseActivity();clearFixtureRequest()}});
