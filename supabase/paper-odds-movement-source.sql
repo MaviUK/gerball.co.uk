@@ -2,7 +2,6 @@ CREATE OR REPLACE FUNCTION public.gerball_paper_odds_movement()
  RETURNS jsonb
  LANGUAGE sql
  STABLE
- SECURITY INVOKER
  SET search_path TO ''
 AS $function$
 WITH paper AS MATERIALIZED (
@@ -12,6 +11,8 @@ WITH paper AS MATERIALIZED (
  b.quote_collected_at AS original_capture,
  b.recommended_units
  FROM gerball_advice_private.paper_bets b
+ WHERE b.fixture_date <= (statement_timestamp() AT TIME ZONE 'Europe/London')::date
+ AND (b.recorded_at AT TIME ZONE 'Europe/London')::date = (b.kickoff_at AT TIME ZONE 'Europe/London')::date
 ), eligible AS MATERIALIZED (
  SELECT * FROM paper b
  WHERE b.market IN ('H','D','A')

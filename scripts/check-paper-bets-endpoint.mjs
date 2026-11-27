@@ -19,6 +19,11 @@ const record=(overrides={})=>({
  won:true,net_units:2.2,...overrides,
 });
 const oneSummary=()=>({bets:1,settled:1,pending:0,review:0,won:1,lost:0,units_recommended:2,units_settled:2,net_units:2.2,roi_pct:110});
+const fixturePayload=(date='2026-11-24',overrides={})=>({
+ version:'gerball_day_fixtures_v1',date,total:1,results_available:0,
+ matches:[{home:'Alanyaspor',away:'Konyaspor',league:'T1',kickoff_at:date+'T17:00:00Z',
+  home_goals:null,away_goals:null,result:null,paper_bets:[]}],...overrides,
+});
 
 function app({fetchImpl=async()=>Response.json(dayPayload()),clock=initial,env:overrides={}}={}){
  let handler;
@@ -112,6 +117,56 @@ test('selected date, search and pagination use a fixed parameterized read-only R
  assert.match(response.headers.get('cache-control'),/max-age=30/);
  assert.equal(response.headers.get('access-control-allow-origin'),'*');
  assert.equal(response.headers.get('apikey'),null);
+});
+
+test('fixtures scope reads the selected UK date through the dedicated read-only RPC',async()=>{
+ for(const date of ['2026-11-24','2026-11-25']){
+  const payload=fixturePayload(date);
+  const ui=app({fetchImpl:async()=>Response.json(payload)});
+  const response=await ui.request('?scope=fixtures&date='+date);
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),payload);
+  assert.equal(ui.calls.length,1);
+  assert.equal(ui.calls[0].url,'https://database.test/rest/v1/rpc/gerball_day_fixtures');
+  assert.deepEqual(ui.calls[0].body,{p_date:date});
+  assert.equal(ui.calls[0].options.method,'POST');
+  assert.equal(ui.calls[0].options.headers.apikey,SERVER_KEY);
+  assert.match(response.headers.get('cache-control'),/max-age=30/);
+ }
+});
+
+test('fixtures scope rejects missing, invalid and future dates before querying the database',async()=>{
+ const ui=app();
+ for(const query of ['scope=fixtures','scope=fixtures&date=','scope=fixtures&date=2026-02-29',
+  'scope=fixtures&date=2026-11-26','scope=fixtures&date=2026-11-24&date=2026-11-23']){
+  assert.equal((await ui.request('?'+query)).status,400,query);
+ }
+ assert.equal(ui.calls.length,0);
+ const summer=app({clock:'2026-07-12T23:30:00Z',fetchImpl:async()=>Response.json(fixturePayload('2026-07-13'))});
+ assert.equal((await summer.request('?scope=fixtures&date=2026-07-13')).status,200,'UK date may be tomorrow in UTC during BST');
+ assert.equal((await summer.request('?scope=fixtures&date=2026-07-14')).status,400);
+});
+
+test('fixtures scope fails closed for wrong dates, versions and malformed matches',async()=>{
+ const base=fixturePayload();
+ for(const payload of [
+  {...base,version:'paper_day_v1'}, {...base,date:'2026-11-23'},
+  {...base,total:'1'}, {...base,results_available:null}, {...base,matches:null},
+  {...base,matches:Array.from({length:1501},()=>base.matches[0])},
+  {...base,matches:[null]}, {...base,matches:[{...base.matches[0],home:null}]},
+  {...base,matches:[{...base.matches[0],away:12}]},
+  {...base,matches:[{...base.matches[0],kickoff_at:'invalid'}]},
+  {...base,matches:[{...base.matches[0],kickoff_at:'2026-11-25T00:00:00Z'}]},
+ ]){
+  const ui=app({fetchImpl:async()=>Response.json(payload)});
+  const response=await ui.request('?scope=fixtures&date=2026-11-24');
+  assert.equal(response.status,502);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.deepEqual(await response.json(),{error:'Invalid fixture report'});
+ }
+ const unknownTime=fixturePayload('2026-11-24',{matches:[{...base.matches[0],kickoff_at:null}]});
+ const ui=app({fetchImpl:async()=>Response.json(unknownTime)});
+ assert.equal((await ui.request('?scope=fixtures&date=2026-11-24')).status,200,'Imported matches may legitimately have no kickoff time');
 });
 
 test('valid leap days and London summer midnight are accepted',async()=>{

@@ -133,7 +133,7 @@ SELECT jsonb_build_object(
  'away_sample',away_n,'input_sha256',input_sha256
  ) ORDER BY kickoff_at,league_code,event_id) FROM fixtures),'[]'::jsonb)
 )
-$function$
+$function$;
 
 
 REVOKE ALL ON FUNCTION public.gerball_bet_candidates(date) FROM PUBLIC,anon,authenticated;
@@ -161,9 +161,20 @@ quote_collected_at timestamptz NOT NULL,quote_updated_at timestamptz NOT NULL,
 model_probability numeric NOT NULL CHECK(model_probability BETWEEN 0 AND 1),
 estimated_edge numeric NOT NULL,recommended_units integer NOT NULL CHECK(recommended_units BETWEEN 1 AND 5),
 model_snapshot jsonb NOT NULL,recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-UNIQUE(model_version,league_code,event_id),
-UNIQUE(model_version,league_code,season,fixture_date,home_team,away_team),
 UNIQUE(observation_id));
+CREATE UNIQUE INDEX IF NOT EXISTS gerball_paper_bets_same_day_event_key
+ON gerball_advice_private.paper_bets (model_version, league_code, event_id)
+WHERE (recorded_at AT TIME ZONE 'Europe/London')::date
+    = (kickoff_at AT TIME ZONE 'Europe/London')::date;
+
+CREATE UNIQUE INDEX IF NOT EXISTS gerball_paper_bets_same_day_fixture_key
+ON gerball_advice_private.paper_bets
+  (model_version, league_code, season, fixture_date, home_team, away_team)
+WHERE (recorded_at AT TIME ZONE 'Europe/London')::date
+    = (kickoff_at AT TIME ZONE 'Europe/London')::date;
+
+-- Existing installations require the same-day identity migration to remove
+-- the legacy global constraints; new installations start with these indexes.
 CREATE INDEX IF NOT EXISTS gerball_paper_bets_order_idx
 ON gerball_advice_private.paper_bets(recorded_at DESC,id DESC);
 CREATE TABLE IF NOT EXISTS gerball_advice_private.paper_captures(
@@ -182,10 +193,21 @@ CREATE OR REPLACE FUNCTION gerball_advice_private.check_paper_insert()
  LANGUAGE plpgsql
  SET search_path TO ''
 AS $function$
-DECLARE src gerball_tracking_private.observations%ROWTYPE;
+DECLARE
+ src gerball_tracking_private.observations%ROWTYPE;
+ recorded_day date;
 BEGIN
  NEW.recorded_at:=clock_timestamp();
+ recorded_day:=(NEW.recorded_at AT TIME ZONE 'Europe/London')::date;
+ IF (NEW.kickoff_at AT TIME ZONE 'Europe/London')::date IS DISTINCT FROM recorded_day
+ OR NEW.fixture_date IS DISTINCT FROM recorded_day THEN
+ RAISE EXCEPTION 'paper_advice_requires_same_uk_day' USING ERRCODE='22023';
+ END IF;
  SELECT * INTO STRICT src FROM gerball_tracking_private.observations WHERE id=NEW.observation_id;
+ IF src.fixture_date IS DISTINCT FROM recorded_day
+ OR (src.recorded_at AT TIME ZONE 'Europe/London')::date IS DISTINCT FROM recorded_day THEN
+ RAISE EXCEPTION 'paper_advice_requires_same_day_observation' USING ERRCODE='22023';
+ END IF;
  IF src.event_id<>NEW.event_id OR src.league_code<>NEW.league_code OR src.kickoff_at<>NEW.kickoff_at
  OR NEW.recorded_at>=src.kickoff_at OR src.recorded_at>NEW.recorded_at
  OR NEW.quote_collected_at>src.recorded_at OR NEW.quote_updated_at>src.recorded_at
@@ -200,7 +222,7 @@ BEGIN
  END IF;
  RETURN NEW;
 END;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION gerball_advice_private.reject_paper_edit()
  RETURNS trigger
@@ -210,7 +232,7 @@ AS $function$
 BEGIN
  RAISE EXCEPTION 'paper_advice_is_append_only' USING ERRCODE='55000';
 END;
-$function$
+$function$;
 
 DROP TRIGGER IF EXISTS paper_bets_before_insert ON gerball_advice_private.paper_bets;
 CREATE TRIGGER paper_bets_before_insert BEFORE INSERT ON gerball_advice_private.paper_bets
@@ -265,6 +287,7 @@ BEGIN
  (row->>'quote_updated_at')::timestamptz,(row->>'probability')::numeric,
  (row->>'estimated_edge')::numeric,(row->>'units')::integer,row
  FROM gerball_tracking_private.observations o WHERE o.id=(row->>'observation_id')::bigint
+ AND o.fixture_date=today AND (o.kickoff_at AT TIME ZONE 'Europe/London')::date=today
  ON CONFLICT DO NOTHING;
  GET DIAGNOSTICS complete = ROW_COUNT;
  saved:=saved+complete;
@@ -275,7 +298,7 @@ BEGIN
  ON CONFLICT DO NOTHING;
  RETURN jsonb_build_object('status','completed','date',today,'saved',saved);
 END;
-$function$
+$function$;
 
 CREATE OR REPLACE FUNCTION public.gerball_paper_report(p_limit integer DEFAULT 250, p_offset integer DEFAULT 0)
  RETURNS jsonb
@@ -305,6 +328,8 @@ BEGIN
     match_id,imported_at,correction_reason FROM gerball_tracking_private.result_revisions
     WHERE observation_id=b.observation_id ORDER BY revision DESC LIMIT 1
   ) s ON true
+  WHERE b.fixture_date <= (statement_timestamp() AT TIME ZONE 'Europe/London')::date
+    AND (b.recorded_at AT TIME ZONE 'Europe/London')::date = (b.kickoff_at AT TIME ZONE 'Europe/London')::date
  ), computed AS MATERIALIZED (
   SELECT l.*,CASE WHEN result_status='settled' THEN
    CASE WHEN won THEN round(recommended_units*(odds-1),2) ELSE -recommended_units END
@@ -370,7 +395,7 @@ BEGIN
  ) INTO output;
  RETURN output;
 END
-$function$
+$function$;
 
 REVOKE ALL ON FUNCTION gerball_advice_private.capture_paper_bets() FROM PUBLIC,anon,authenticated,service_role;
 REVOKE ALL ON FUNCTION gerball_advice_private.check_paper_insert() FROM PUBLIC,anon,authenticated,service_role;

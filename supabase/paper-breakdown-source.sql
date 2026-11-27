@@ -19,6 +19,8 @@ WITH ledger AS MATERIALIZED (
  FROM gerball_tracking_private.result_revisions
  WHERE observation_id=b.observation_id ORDER BY revision DESC LIMIT 1
  ) r ON true
+ WHERE b.fixture_date <= (statement_timestamp() AT TIME ZONE 'Europe/London')::date
+ AND (b.recorded_at AT TIME ZONE 'Europe/London')::date = (b.kickoff_at AT TIME ZONE 'Europe/London')::date
 ), calculated AS MATERIALIZED (
  SELECT *,
  CASE WHEN result_status='settled' THEN
@@ -55,7 +57,7 @@ WITH ledger AS MATERIALIZED (
 )
 SELECT jsonb_build_object(
  'version','paper_breakdown_v1','generated_at',now(),
- 'scope','all saved hypothetical paper selections, latest settlement revision',
+ 'scope','eligible same-day paper selections, latest settlement revision',
  'total_bets',(SELECT count(*) FROM calculated),
  'settled_bets',(SELECT count(*) FROM calculated WHERE result_status='settled'),
  'total_net_units',(SELECT coalesce(round(sum(net_units),2),0) FROM calculated),

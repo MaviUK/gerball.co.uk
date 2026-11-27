@@ -209,7 +209,17 @@ assert(html.includes("gerball-prospective-candidate-DRAFT.json"),'Draft JSON fil
 console.log('Prospective candidate export guardrails passed.');
 
 const refresh=fs.readFileSync('.github/workflows/update-current-season.yml','utf8');
-assert(refresh.includes("cron: '15 8 * * 1,5'"),'Monday/Friday refresh schedule missing');
+const refreshSchedules=[...refresh.matchAll(/^\s+- cron: '([^']+)'\s*$/gm)].map(match=>match[1]).sort();
+assert.deepEqual(refreshSchedules,['15 7 * * *','15 8 * * *'],
+ 'Daily 08:15 UK refresh needs both UTC offsets and must include Monday and Friday');
+assert(refresh.includes("uk=now.astimezone(zoneinfo.ZoneInfo('Europe/London'))"),
+ 'Refresh schedule must use the Europe/London UTC offset');
+assert(refresh.includes("expected='15 7 * * *' if uk.utcoffset().total_seconds()==3600 else '15 8 * * *'"),
+ 'Refresh schedule must select 07:15 UTC during BST and 08:15 UTC during GMT');
+assert(refresh.includes("os.environ.get('EVENT_NAME')=='workflow_dispatch' or os.environ.get('SCHEDULE_EXPRESSION')==expected"),
+ 'Only the matching UTC schedule may run automatically; manual imports must remain available');
+assert.equal((refresh.match(/if: steps\.uk_schedule\.outputs\.run_import == 'true'/g)||[]).length,2,
+ 'Both importer credential checks and execution must follow the UK schedule gate');
 assert(refresh.includes("secrets.EDGELAB_IMPORT_TOKEN"),'Scheduled refresh must use a GitHub Actions secret');
 assert(refresh.includes("workflow_dispatch:"),'Manual import trigger missing');
 assert(refresh.includes("if len(rows)!=21 or failures:"),'Scheduled import must fail on incomplete league updates');

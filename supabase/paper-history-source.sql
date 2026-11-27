@@ -3,13 +3,10 @@
 CREATE INDEX IF NOT EXISTS gerball_paper_bets_kickoff_idx
 ON gerball_advice_private.paper_bets(kickoff_at,recorded_at DESC,id DESC);
 
-CREATE OR REPLACE FUNCTION public.gerball_paper_day(
- p_date date,p_query text,p_limit integer DEFAULT 250,p_offset integer DEFAULT 0
-)
+CREATE OR REPLACE FUNCTION public.gerball_paper_day(p_date date, p_query text, p_limit integer DEFAULT 250, p_offset integer DEFAULT 0)
  RETURNS jsonb
  LANGUAGE plpgsql
  STABLE
- SECURITY INVOKER
  SET search_path TO ''
 AS $function$
 DECLARE
@@ -46,7 +43,8 @@ BEGIN
   ) r ON true
   -- Convert the two local midnights independently: DST days last 23 or 25 hours.
   -- Leave kickoff_at unwrapped so the date filter can use its B-tree index.
-  WHERE b.kickoff_at>=(p_date::timestamp AT TIME ZONE 'Europe/London')
+  WHERE (b.recorded_at AT TIME ZONE 'Europe/London')::date = (b.kickoff_at AT TIME ZONE 'Europe/London')::date
+   AND b.kickoff_at>=(p_date::timestamp AT TIME ZONE 'Europe/London')
    AND b.kickoff_at<((p_date+1)::timestamp AT TIME ZONE 'Europe/London')
    AND (needle=''
     OR lower(b.home_team) LIKE '%'||needle||'%'
@@ -111,11 +109,10 @@ REVOKE ALL ON FUNCTION public.gerball_paper_day(date,text,integer,integer) FROM 
 GRANT EXECUTE ON FUNCTION public.gerball_paper_day(date,text,integer,integer) TO service_role;
 
 -- Preserve the existing Today endpoint and version, with the new summary added.
-CREATE OR REPLACE FUNCTION public.gerball_paper_today(p_query text,p_limit integer DEFAULT 250,p_offset integer DEFAULT 0)
+CREATE OR REPLACE FUNCTION public.gerball_paper_today(p_query text, p_limit integer DEFAULT 250, p_offset integer DEFAULT 0)
  RETURNS jsonb
  LANGUAGE sql
  STABLE
- SECURITY INVOKER
  SET search_path TO ''
 AS $function$
  SELECT public.gerball_paper_day(

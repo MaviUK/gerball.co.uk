@@ -99,9 +99,9 @@ async function chooseDate(ui, day) {
   ui.date().value = day; await ui.date().dispatch('change'); await flush();
 }
 
-function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true, { scopedFetch } = {}) {
+function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true, { scopedFetch, fixturesFetch } = {}) {
   let now = Date.parse(initial), timerId = 0;
-  const timers = new Map(), windowEvents = new Map(), documentEvents = new Map(), calls = [], scopedCalls = [], downloads = [], blobs = new Map();
+  const timers = new Map(), windowEvents = new Map(), documentEvents = new Map(), calls = [], scopedCalls = [], fixtureCalls = [], downloads = [], blobs = new Map();
   let lastReport = null;
   class Clock extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
   const document = { hidden: false, visibilityState: 'visible', activeElement: null, downloads };
@@ -123,6 +123,16 @@ function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true, { scop
     addEventListener(name, fn) { if (!windowEvents.has(name)) windowEvents.set(name, []); windowEvents.get(name).push(fn); },
     fetch(url, options = {}) {
       const call = { url: new URL(url), options };
+      if (call.url.searchParams.get('scope') === 'fixtures') {
+        fixtureCalls.push(call);
+        return Promise.resolve(fixturesFetch ? fixturesFetch(call, api) : Response.json({
+          version: 'gerball_day_fixtures_v1', date: call.url.searchParams.get('date'), total: 0, results_available: 0, matches: [],
+        }));
+      }
+      // Daily-performance requests are separate from the paged ledger lifecycle.
+      if (call.url.searchParams.get('scope') === null && call.url.searchParams.get('q') === '' && call.url.searchParams.get('limit') === '1000') {
+        return Promise.resolve(Response.json({ version: 'paper_search_v1', query: '', total_records: 0, records: [] }));
+      }
       if (['today', 'date'].includes(call.url.searchParams.get('scope'))) {
         scopedCalls.push(call);
         if (scopedFetch) return Promise.resolve(scopedFetch(call, api));
@@ -144,7 +154,7 @@ function app(fetchImpl, initial = '2026-11-25T13:00:00Z', visible = true, { scop
   context.window = context;
   const emit = (map, name, detail) => { for (const fn of map.get(name) || []) fn({ detail }); };
   const api = {
-    calls, scopedCalls, context, document, view, holder, timers, downloads, blobs, now: () => now,
+    calls, scopedCalls, fixtureCalls, context, document, view, holder, timers, downloads, blobs, now: () => now,
     find: className => holder.querySelectorAll('.' + className),
     cards: () => holder.querySelectorAll('.pb-match'),
     button: text => holder.querySelectorAll('button').find(button => button.textContent === text),
@@ -194,6 +204,131 @@ test('next UK midnight handles GMT, BST and both clock-change days', () => {
     ['2026-03-29T00:30:00Z', '2026-03-29T23:00:00Z'],
     ['2026-10-25T00:30:00Z', '2026-10-26T00:00:00Z'],
   ]) assert.equal(dates.nextChangeAt([], new Date(now)), Date.parse(expected), now);
+});
+
+test('daily capture schedule follows UK local time in GMT, BST and clock-change days', () => {
+  for (const [before, due, after] of [
+    ['2026-11-27T12:34:59Z', '2026-11-27T12:35:00Z', '2026-11-27T12:45:00Z'],
+    ['2026-07-12T11:34:59Z', '2026-07-12T11:35:00Z', '2026-07-12T11:45:00Z'],
+    ['2026-03-29T11:34:59Z', '2026-03-29T11:35:00Z', '2026-03-29T11:45:00Z'],
+    ['2026-10-25T12:34:59Z', '2026-10-25T12:35:00Z', '2026-10-25T12:45:00Z'],
+  ]) {
+    assert.equal(dates.captureWindow(before), 'scheduled');
+    assert.equal(dates.captureWindow(due), 'retry_window');
+    assert.equal(dates.captureWindow(after), 'after_schedule');
+  }
+  assert.equal(dates.captureWindow('invalid'), null);
+});
+
+function fixtureHistory(date, { paperBets = [], settled = false } = {}) {
+  return {
+    version: 'gerball_day_fixtures_v1', date, total: 1, results_available: settled ? 1 : 0,
+    matches: [{ league: 'T1', home: 'Alanyaspor', away: 'Konyaspor', kickoff_at: date + 'T17:00:00Z',
+      result: settled ? 'H' : null, home_goals: settled ? 2 : null, away_goals: settled ? 0 : null, paper_bets: paperBets }],
+  };
+}
+
+test('before the daily run, paper bets appear first and unbet fixtures are replaced by the scheduled wait', async () => {
+  const ui = app((call, state) => Response.json(report(state.now(), [], { records: [], total_records: 0 })), '2026-11-27T11:44:00Z', true, {
+    fixturesFetch: call => Response.json(fixtureHistory(call.url.searchParams.get('date'))),
+  });
+  await flush();
+  const ledger = ui.find('pb-ledger')[0], fixtures = ui.find('pb-date-fixtures')[0];
+  assert(ui.holder.children.indexOf(ledger) < ui.holder.children.indexOf(fixtures), 'Saved paper bets must precede the match results panel');
+  assert.match(ui.find('pb-ledger-empty')[0].textContent, /Awaiting today’s 12:35 UK/);
+  assert.match(ui.find('pb-capture-status')[0].textContent, /odds at 12:00 UK, paper bets at 12:35 UK/);
+  assert.match(fixtures.textContent, /Awaiting today’s 12:35 UK paper-bet run/);
+  assert.doesNotMatch(fixtures.textContent, /\bNone\b/);
+  assert.doesNotMatch(fixtures.textContent, /Alanyaspor|Konyaspor/, 'Fixtures without paper bets must never render as match rows');
+  await chooseDate(ui, '2026-11-26');
+  assert.equal(ui.find('pb-capture-status')[0].hidden, true);
+  assert.match(fixtures.textContent, /No matches with recorded paper bets/);
+  assert.doesNotMatch(fixtures.textContent, /Awaiting today’s 12:35/);
+});
+
+test('passing capture time changes waiting text without inferring a completed assessment', async () => {
+  for (const initial of ['2026-11-27T12:34:50Z', '2026-07-12T11:34:50Z']) {
+    const ui = app((call, state) => Response.json(report(state.now(), [], { records: [], total_records: 0 })), initial, true, {
+      fixturesFetch: call => Response.json(fixtureHistory(call.url.searchParams.get('date'))),
+    });
+    await flush();
+    await ui.advance(30000);
+    assert.match(ui.find('pb-ledger-empty')[0].textContent, /No paper bets recorded for today/);
+    assert.match(ui.find('pb-capture-status')[0].textContent, /retry checks continue until 12:45 UK/);
+    assert.match(ui.find('pb-date-fixtures')[0].textContent, /No matches with recorded paper bets/);
+    assert.doesNotMatch(ui.find('pb-date-fixtures')[0].textContent, /Awaiting today’s 12:35/);
+    await ui.advance(10 * 60000);
+    assert.match(ui.find('pb-capture-status')[0].textContent, /No completed daily assessment is confirmed/);
+    assert.doesNotMatch(ui.find('pb-capture-status')[0].textContent, /no qualifying|assessment completed/i);
+  }
+});
+
+test('match results include only fixtures with recorded paper bets and no all-fixtures toggle', async () => {
+  const payload=fixtureHistory('2026-11-27',{paperBets:[{market:'H',units:2,odds:2.1}],settled:true});
+  payload.matches.push({...payload.matches[0],home:'Unbet home',away:'Unbet away',paper_bets:[]});
+  payload.matches.push({...payload.matches[0],home:'Unassessed home',away:'Unassessed away',paper_bets:null});
+  payload.total=3;payload.results_available=3;
+  const ui=app((call,state)=>Response.json(report(state.now(),[])),'2026-11-27T19:00:00Z',true,{
+    fixturesFetch:()=>Response.json(payload),
+  });
+  await flush();
+  const panel=ui.find('pb-date-fixtures')[0];
+  assert.match(panel.textContent,/Matches with paper bets/);
+  assert.match(panel.textContent,/1 match with recorded paper bets · 1 final results available/);
+  assert.match(panel.textContent,/Alanyaspor v Konyaspor/);
+  assert.doesNotMatch(panel.textContent,/Unbet|Unassessed|All fixtures|All matches/);
+  assert.equal(panel.querySelectorAll('select').length,0);
+  assert.equal(panel.querySelectorAll('input').length,0);
+});
+
+test('only a confirmed same-day capture is displayed as completed and counts come from the selected ledger', async () => {
+  const initial = '2026-11-27T13:00:00Z';
+  for (const [capture, completed] of [
+    [{ date: '2026-11-27', saved: 6, fixtures: 237, captured_at: '2026-11-27T12:35:05Z' }, true],
+    [{ date: '2026-11-26', saved: 6, fixtures: 237, captured_at: '2026-11-26T12:35:05Z' }, false],
+    [{ date: '2026-11-27', saved: 6, fixtures: 237, captured_at: '2026-11-27T13:35:05Z' }, false],
+  ]) {
+    const ui = app((call, state) => Response.json(report(state.now(), [], { records: [], total_records: 0, last_capture: capture })), initial);
+    await flush();
+    assert.equal(/Today’s run completed/.test(ui.find('pb-capture-status')[0].textContent), completed);
+    assert.match(ui.find('pb-ledger-empty')[0].textContent, /No paper bets recorded for today/);
+    assert.doesNotMatch(ui.find('pb-capture-status')[0].textContent, /6 paper bets|no qualifying/i);
+  }
+});
+
+test('same-day fixtures refresh saved selections and imported results automatically while visible', async () => {
+  const saved = record('New paper selection', { home: 'Alanyaspor', away: 'Konyaspor', kickoff_at: '2026-11-27T17:00:00Z',
+    recorded_at: '2026-11-27T12:35:00Z', status: 'pending', home_goals: null, away_goals: null, won: null, net_units: null });
+  let captured = false, settled = false;
+  const ui = app((call, state) => Response.json(report(state.now(), [], { records: captured ? [saved] : [], total_records: captured ? 1 : 0 })), '2026-11-27T12:34:00Z', true, {
+    fixturesFetch: call => Response.json(fixtureHistory(call.url.searchParams.get('date'), {
+      paperBets: captured ? [{ market: 'H', units: 2, odds: 2.1 }] : [], settled,
+    })),
+  });
+  await flush(); assert.equal(ui.fixtureCalls.length, 1);
+  captured = true;
+  await ui.advance(5 * 60000);
+  assert.equal(ui.fixtureCalls.length, 2, 'A matching date must not cache fixture picks indefinitely');
+  assert.match(ui.find('pb-date-fixtures')[0].textContent, /Home win · 2u @ 2.10/);
+  assert.match(ui.find('pb-ledger')[0].textContent, /Alanyaspor v Konyaspor/);
+  await ui.visibility(true); const hiddenCalls = ui.fixtureCalls.length;
+  settled = true; await ui.advance(5 * 60000);
+  assert.equal(ui.fixtureCalls.length, hiddenCalls, 'Hidden views must not keep fetching fixtures');
+  await ui.visibility(false);
+  assert.equal(ui.fixtureCalls.length, hiddenCalls + 1);
+  assert.match(ui.find('pb-date-fixtures')[0].textContent, /1 final results available/);
+  assert.match(ui.find('pb-date-fixtures')[0].textContent, /2–0/);
+});
+
+test('fixture refresh has its own clock when its initial response arrives after the ledger', async () => {
+  const delayed = deferred(); let requests = 0;
+  const ui = app((call, state) => Response.json(report(state.now(), [])), '2026-11-27T12:34:00Z', true, {
+    fixturesFetch: call => ++requests === 1 ? delayed.promise : Response.json(fixtureHistory(call.url.searchParams.get('date'))),
+  });
+  await flush(); ui.jump(1000);
+  delayed.resolve(Response.json(fixtureHistory('2026-11-27'))); await flush();
+  await ui.advance(5 * 60000 + 30000);
+  assert.equal(requests, 2, 'A slower fixture response must not delay its refresh until the next five-minute ledger cycle');
 });
 
 test('loads only when activated, coalesces activation, and filters cached started/future fixtures', async () => {

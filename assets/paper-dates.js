@@ -1,5 +1,6 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.GerballPaperDates=api;})(typeof globalThis!=='undefined'?globalThis:null,function(){'use strict';
 const london=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'});
+const londonClock=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
 function day(value){
  const d=value instanceof Date?value:new Date(value);
  if(!Number.isFinite(d.getTime()))return null;
@@ -37,6 +38,13 @@ function nextChangeAt(fixtures,now=new Date()){
  for(const fixture of upcomingToday(fixtures,now))next=Math.min(next,Date.parse(fixture.kickoff_at));
  return next;
 }
+// This describes the UK schedule only, never whether a server run succeeded.
+function captureWindow(now=new Date()){
+ const clock=new Date(now);if(!Number.isFinite(clock.getTime()))return null;
+ const parts=Object.fromEntries(londonClock.formatToParts(clock).map(part=>[part.type,part.value]));
+ const minutes=Number(parts.hour)*60+Number(parts.minute);
+ return minutes<12*60+35?'scheduled':minutes<12*60+45?'retry_window':'after_schedule';
+}
 // Price observations are research snapshots. "recent" is not bookmaker-executable.
 function priceState(fixture,now=new Date()){
  const clock=Number(new Date(now).getTime());
@@ -58,5 +66,5 @@ function priceState(fixture,now=new Date()){
  return{status:'aging',label:'Aging saved quote',detail:'Saved price is older than 15 minutes; verify current odds before considering any stake.',captureMinutes,providerMinutes};
  return{status:'old',label:'Old saved quote',detail:'Price is older than 2 hours or provider-updated too long ago; research only, not a usable quote.',captureMinutes,providerMinutes};
 }
-return{day,validDay,shiftDay,isToday,todayOnly,upcomingToday,nextChangeAt,priceState};
+return{day,validDay,shiftDay,isToday,todayOnly,upcomingToday,nextChangeAt,captureWindow,priceState};
 });

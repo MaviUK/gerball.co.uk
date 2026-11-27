@@ -37,8 +37,8 @@ Deno.serve(async request=>{
   return json({error:"Supported parameters: limit, offset, q, scope, date"},400);
  const limit=params.get("limit")??"250",offset=params.get("offset")??"0";
  const query=params.get("q"),scope=params.get("scope"),date=params.get("date"),today=ukDay(Date.now());
- if(scope!==null&&!["today","history","date"].includes(scope))return json({error:"Invalid scope"},400);
- if(scope==="date"?(!validDate(date)||date>today):date!==null)
+ if(scope!==null&&!["today","history","date","fixtures"].includes(scope))return json({error:"Invalid scope"},400);
+ if(scope==="date"||scope==="fixtures"?(!validDate(date)||date>today):date!==null)
   return json({error:"Use scope=date with a valid date on or before today (UK)"},400);
  if(query!==null&&(query.length>100||/[\u0000-\u001f\u007f]/.test(query)))return json({error:"Invalid search"},400);
  if(!/^[0-9]{1,4}$/.test(limit)||+limit<1||+limit>1000||!/^[0-9]{1,5}$/.test(offset)||+offset>50000)
@@ -52,8 +52,8 @@ Deno.serve(async request=>{
   const headers={"Content-Type":"application/json",apikey:role,
    ...(!role.startsWith("sb_secret_")?{Authorization:"Bearer "+role}:{})};
   const scoped=scope==="today"||scope==="date";
-  const rpc=scope==="date"?"gerball_paper_day":scope==="today"?"gerball_paper_today":query===null?"gerball_paper_report":"gerball_paper_search";
-  const args={p_limit:+limit,p_offset:+offset,
+  const rpc=scope==="fixtures"?"gerball_day_fixtures":scope==="date"?"gerball_paper_day":scope==="today"?"gerball_paper_today":query===null?"gerball_paper_report":"gerball_paper_search";
+  const args=scope==="fixtures"?{p_date:date}:{p_limit:+limit,p_offset:+offset,
    ...(scoped||query!==null?{p_query:query??""}:{}),
    ...(scope==="date"?{p_date:date}:{})};
   const result=await fetch(base.replace(/\/$/,"")+"/rest/v1/rpc/"+rpc,{
@@ -61,7 +61,13 @@ Deno.serve(async request=>{
   });
   if(!result.ok){console.error("Paper report RPC failed",result.status);return json({error:"Recommendations temporarily unavailable"},502)}
   const value=await result.json();
-  if(scoped){
+  if(scope==="fixtures"){
+   if(query!==null||value?.version!=="gerball_day_fixtures_v1"||value.date!==date||
+      !Number.isInteger(value.total)||!Number.isInteger(value.results_available)||
+      !Array.isArray(value.matches)||value.matches.length>1500||
+      value.matches.some(m=>!m||typeof m.home!=="string"||typeof m.away!=="string"||
+       (m.kickoff_at!==null&&ukDay(m.kickoff_at)!==date)))return json({error:"Invalid fixture report"},502);
+  }else if(scoped){
    const expectedVersion=scope==="date"?"paper_day_v1":"paper_today_v1";
    // At midnight a Today request may finish on the next UK day; accept that day only.
    const matchesDate=scope==="date"?value?.date===date:value?.date===today||value?.date===ukDay(Date.now());

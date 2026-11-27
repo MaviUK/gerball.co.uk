@@ -28,7 +28,9 @@ BEGIN
  FROM gerball_tracking_private.result_revisions
  WHERE observation_id=b.observation_id ORDER BY revision DESC LIMIT 1
  ) r ON true
- WHERE needle=''
+ WHERE b.fixture_date <= (statement_timestamp() AT TIME ZONE 'Europe/London')::date
+ AND (b.recorded_at AT TIME ZONE 'Europe/London')::date = (b.kickoff_at AT TIME ZONE 'Europe/London')::date
+ AND (needle=''
  OR lower(b.home_team) LIKE '%'||needle||'%'
  OR lower(b.away_team) LIKE '%'||needle||'%'
  OR lower(b.league_code) LIKE '%'||needle||'%'
@@ -39,7 +41,7 @@ BEGIN
  WHEN 'U25' THEN 'under 2.5 goals' END) LIKE '%'||needle||'%'
  OR lower(b.market) LIKE '%'||needle||'%'
  OR lower(coalesce(r.status,'pending')) LIKE '%'||needle||'%'
- OR b.fixture_date::text LIKE '%'||needle||'%'
+ OR b.fixture_date::text LIKE '%'||needle||'%')
  ), results AS (
  SELECT m.*,
  CASE WHEN m.result_status='settled' THEN

@@ -83,6 +83,7 @@ WITH ledger AS MATERIALIZED (
  WHERE observation_id=b.observation_id
  ORDER BY revision DESC LIMIT 1
  ) r ON true
+ WHERE (b.recorded_at AT TIME ZONE 'Europe/London')::date = (b.kickoff_at AT TIME ZONE 'Europe/London')::date
 ), stage_totals AS (
  SELECT stage,count(*)::integer bets
  FROM ledger GROUP BY stage
@@ -117,6 +118,11 @@ SELECT jsonb_build_object(
  'latest_reconcile_at',(SELECT recorded_at FROM latest_job),
  'latest_reconcile',(SELECT details FROM latest_job),
  'latest_results_import_at',(SELECT latest_import FROM last_import),
+ 'latest_result_match_date',(SELECT max(match_date) FROM public.matches WHERE source='football-data.co.uk'),
+ 'import_age_hours',(SELECT round((extract(epoch FROM (now()-latest_import))/3600)::numeric,1) FROM last_import),
+ 'import_stale',(SELECT latest_import IS NULL OR latest_import < now()-interval '36 hours' FROM last_import),
+ 'awaiting_source_results',(SELECT count(*) FROM ledger WHERE stage='awaiting_import'),
+ 'last_reconciliation_age_minutes',(SELECT round((extract(epoch FROM (now()-recorded_at))/60)::numeric,1) FROM latest_job),
  'revisions',(SELECT to_jsonb(revision_stats) FROM revision_stats),
  'unsettled_examples',coalesce((SELECT jsonb_agg(jsonb_build_object(
    'paper_id',id,'observation_id',observation_id,'league',league_code,
