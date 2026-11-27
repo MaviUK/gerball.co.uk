@@ -46,7 +46,7 @@ function render(data){
  t.append(body);table.append(t)
 }
 async function load(force=false){
- if(view.hidden){section.hidden=true;return}
+ if(view.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='v1')){section.hidden=true;ctrl?.abort();return}
  const date=chosen(),key=date||'all';section.hidden=false;
  if(!force&&lastKey===key&&Date.now()-lastAt<45000)return;
  if(ctrl)ctrl.abort();const own=new AbortController();ctrl=own;refresh.disabled=true;
@@ -63,6 +63,7 @@ async function load(force=false){
  finally{if(own===ctrl){ctrl=null;refresh.disabled=false}}
 }
 refresh.addEventListener('click',()=>load(true));
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='v1')load(true);else ctrl?.abort()});
 doc.getElementById('pb-ledger-scope')?.addEventListener('change',()=>root.setTimeout(()=>load(true),0));
 doc.getElementById('pb-ledger-date')?.addEventListener('change',()=>root.setTimeout(()=>load(true),0));
 doc.querySelector('.pb-day-buttons')?.addEventListener('click',()=>root.setTimeout(()=>load(true),0));
