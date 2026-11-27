@@ -66,10 +66,13 @@ const performanceTable=$('div',undefined,'pb-table-wrap pb-history-table');
 performance.append(performanceStatus,performanceMetrics,performanceChart,performanceTable);
 
 const fixturesPanel=$('section',undefined,'card pb-date-fixtures');
-const fixturesHeading=$('h2','Matches on selected date');
-const fixturesStatus=$('p','Choose a day to see its recorded fixtures and results.','pb-caption');
+const fixturesHeading=$('h2','Matches with paper bets');
+const fixturesMode=$('select');fixturesMode.id='pb-fixtures-mode';fixturesMode.setAttribute('aria-label','Choose which matches to display');
+for(const [value,label] of [['bets','Only matches with paper bets'],['all','All recorded matches']]){const option=$('option',label);option.value=value;fixturesMode.append(option)}
+const fixturesHeader=$('div',undefined,'pb-top');fixturesHeader.append(fixturesHeading,fixturesMode);
+const fixturesStatus=$('p','Choose a day to see its recorded paper bets and results.','pb-caption');
 const fixturesWrap=$('div',undefined,'pb-table-wrap pb-history-table');
-fixturesPanel.append(fixturesHeading,fixturesStatus,fixturesWrap);
+fixturesPanel.append(fixturesHeader,fixturesStatus,fixturesWrap);
 const candidateSection=$('section',undefined,'card pb-assessments'),candidateTop=$('div',undefined,'pb-top');
 candidateTop.append($('h2',"Today's match assessments"));
 const selector=$('select');selector.setAttribute('aria-label','Show assessments');for(const [value,label] of [['all','All matches'],['candidate','Model candidates'],['no','No bet']]){const o=$('option',label);o.value=value;selector.append(o)}
@@ -270,14 +273,19 @@ async function loadDayFixtures(force=false){
   if(result?.version!=='gerball_day_fixtures_v1'||result.date!==date||!Array.isArray(result.matches))throw Error('Invalid match history');
   if(token!==fixturesCounter||!visible()||ledgerScope==='history')return;
   fixturesLastKey=key;
-  fixturesStatus.textContent=result.total+' recorded matches · '+result.results_available+' final results available. Missing scores stay marked awaiting import.';
-  if(!result.matches.length){fixturesWrap.append($('p','No fixtures have been recorded for this date.','pb-caption'));return}
+  const showAll=fixturesMode.value==='all';
+  const shown=result.matches.filter(m=>showAll||(Array.isArray(m.paper_bets)&&m.paper_bets.length>0));
+  fixturesHeading.textContent=(showAll?'All matches':'Matches with paper bets')+' · '+calendarDate(date);
+  fixturesStatus.textContent=showAll
+    ?shown.length+' recorded matches · '+shown.filter(m=>m.result!==null&&m.home_goals!==null&&m.away_goals!==null).length+' final results. Scores are shown after verified import.'
+    :shown.length+' match'+(shown.length===1?'':'es')+' with recorded paper bets'+(shown.length?'. Results appear after verified import.':'.');
+  if(!shown.length){fixturesWrap.append($('p',showAll?'No fixtures have been recorded for this date.':'No paper bets were recorded for this date. Use “All recorded matches” to browse the other fixtures.','pb-caption'));return}
   const table=$('table'),head=$('thead'),headingRow=$('tr');
   const labels=['Kickoff','League','Match','Score','Result','Paper bet'];
   for(const label of labels){const th=$('th',label);th.scope='col';headingRow.append(th)}
   head.append(headingRow);table.append(head);
   const body=$('tbody');
-  for(const m of result.matches){
+  for(const m of shown){
    const row=$('tr'),hasResult=m.result!==null&&m.home_goals!==null&&m.away_goals!==null;
    const selections=Array.isArray(m.paper_bets)?m.paper_bets:[];
    const values=[m.kickoff_at?textDate(m.kickoff_at):'Time not recorded',m.league||'—',(m.home||'?')+' v '+(m.away||'?'),hasResult?m.home_goals+'–'+m.away_goals:'—',hasResult?(m.result==='H'?'Home win':m.result==='A'?'Away win':'Draw'):'Awaiting imported result',selections.length?selections.map(b=>(marketNames[b.market]||b.market)+' · '+b.units+'u @ '+fnum(b.odds)).join('; '):'None'];
@@ -290,6 +298,7 @@ async function loadDayFixtures(force=false){
  }finally{if(token===fixturesCounter)fixturesController=null}
 }
 
+fixturesMode.addEventListener('change',()=>{fixturesLastKey='';loadDayFixtures(true)});
 function drawLedger(){
  scroll.replaceChildren();
  const filtered=filteredLedger(),daily=ledgerScope!=='history';
