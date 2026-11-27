@@ -23,7 +23,7 @@ let reportCounter=0,reportController=null,activityTimer=null,lastLoadedAt=null,l
 let reportInterrupted=false,searchInterrupted=false,requestedPage=0,refreshError=null;
 let performanceCounter=0,performanceController=null,performanceLastLoaded=0;
 const REFRESH_MS=5*60000,CLOCK_MS=30000;
-const visible=()=>active&&!view.hidden&&!root.document.hidden;
+const visible=()=>active&&!view.hidden&&!root.document.hidden&&(!holder.dataset.paperTab||['odds','reports'].includes(holder.dataset.paperTab));
 const normalizeQuery=value=>String(value||'').trim().toLocaleLowerCase('en-GB');
 const searchable=value=>String(value??'').toLocaleLowerCase('en-GB');
 const matchesQuery=(row,q)=>!q||[row.home,row.away,row.league,row.market,marketNames[row.market],row.bookmaker,row.decision,reasonNames[row.decision],row.status,row.event_id,row.fixture_date].some(v=>searchable(v).includes(q));
@@ -533,6 +533,13 @@ downloadButton.addEventListener('click',async()=>{
  }catch(error){status.textContent=error.message}finally{exporting=false;busyButtons()}
 });
 root.addEventListener('gerball:paper-refreshed-prices',()=>{if(current&&visible())drawCandidates(new Date())});
+ root.addEventListener('gerball:paper-tabchange',e=>{
+  if(['odds','reports'].includes(e.detail?.tab)){
+   active=!view.hidden;checkActivity();
+   if(e.detail.tab==='reports')refreshPerformance();
+   if(e.detail.tab==='odds')loadDayFixtures();
+  }else{pauseActivity();clearFixtureRequest()}
+ });
 root.addEventListener('gerball:viewchange',e=>{active=e.detail?.view==='picks';if(visible()){checkActivity();refreshPerformance();loadDayFixtures()}else{pauseActivity();clearFixtureRequest()}});
 root.document.addEventListener('visibilitychange',()=>{if(visible()){checkActivity();refreshPerformance();loadDayFixtures()}else{pauseActivity();clearFixtureRequest()}});
 root.addEventListener('focus',()=>{if(visible())checkActivity()});
