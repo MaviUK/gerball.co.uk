@@ -43,6 +43,12 @@
 #paperBets .gb-paper-assessments[open]>summary,#paperBets .gb-paper-report[open]>summary{border-bottom:1px solid #38554a;background:#1c3229}
 #paperBets .gb-paper-assessments>.card,#paperBets .gb-paper-report>.card{border:0!important;box-shadow:none!important;margin:0!important;border-radius:0!important}
 #paperBets .gb-paper-internal-heading{display:none}
+#paperBets .gb-paper-h2h-details{margin-top:15px;border:1px solid #415d48;border-radius:10px;background:#15261b;overflow:hidden}
+#paperBets .gb-paper-h2h-details>summary{padding:13px 14px;color:#cafa5d;font-size:13px;font-weight:730;cursor:pointer}
+#paperBets .gb-paper-h2h-details[open]>summary{border-bottom:1px solid #415d48;background:#213a29}
+#paperBets .gb-paper-h2h-details>.gb-h2h-panel{margin:0!important;padding:12px;border:0!important}
+#paperBets .gb-paper-h2h-details>.gb-h2h-panel>.gb-h2h-heading{margin-bottom:8px}
+
 #paperBets .gb-paper-notice,#paperBets .gb-paper-scope-alert{padding:11px 14px;border:1px solid #4a6552;background:#183325;border-radius:9px;color:#d6eccd;font-size:13px;line-height:1.5;margin:0}
 #paperBets .gb-paper-pane .gb-h2h-panel{margin-top:15px}
 #paperBets .gb-paper-pane .gb-v2-panel,#paperBets .gb-paper-pane .gb-eval-panel,#paperBets .gb-paper-pane .gb-extra-market{margin-top:0!important}
