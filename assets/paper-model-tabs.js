@@ -109,6 +109,8 @@ function scopeNotice(){
  const history=select?.value==='history',tab=host.dataset.paperTab;
  reverseNote.hidden=!(history&&tab==='reverse');
  formNote.hidden=!(history&&tab==='v1');
+ const h2hDisclosure=host.querySelector('.gb-paper-h2h-details');
+ if(h2hDisclosure)h2hDisclosure.hidden=history;
  alert.hidden=!(history&&['reverse','v1'].includes(tab));
  alert.textContent=history?'Complete history is selected. Some fixture-level views need an individual date.':'';
  details.hidden=select?.value==='history'||doc.getElementById('pb-ledger-date')?.value!==root.GerballPaperDates?.day(new Date());
