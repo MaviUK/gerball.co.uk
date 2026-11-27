@@ -1,11 +1,10 @@
 name: Update current football season
 on:
   schedule:
-    # Keep the established 08:15 UTC Monday/Friday full current-season refresh.
-    - cron: '15 8 * * 1,5'
-    # Refresh newly completed match results daily on the other five days.
-    # The existing hourly Supabase reconciliation settles paper bets after import.
-    - cron: '15 8 * * 0,2,3,4,6'
+    # GitHub cron uses UTC. Check both possible UK 08:15 UTC offsets;
+    # the first job step accepts only the schedule matching today's UK offset.
+    - cron: '15 7 * * *'
+    - cron: '15 8 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,7 +18,25 @@ jobs:
     env:
       IMPORT_TOKEN: ${{ secrets.EDGELAB_IMPORT_TOKEN }}
     steps:
+      - name: Use 08:15 UK time in both GMT and BST
+        id: uk_schedule
+        shell: bash
+        env:
+          SCHEDULE_EXPRESSION: ${{ github.event.schedule }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 - <<'PY'
+          import datetime, os, zoneinfo
+          now=datetime.datetime.now(datetime.timezone.utc)
+          uk=now.astimezone(zoneinfo.ZoneInfo('Europe/London'))
+          expected='15 7 * * *' if uk.utcoffset().total_seconds()==3600 else '15 8 * * *'
+          run=os.environ.get('EVENT_NAME')=='workflow_dispatch' or os.environ.get('SCHEDULE_EXPRESSION')==expected
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+            output.write('run_import='+('true' if run else 'false')+'\\n')
+          print('UK date:',uk.date(),'Offset:',uk.utcoffset(),'Trigger:',os.environ.get('SCHEDULE_EXPRESSION'),'Import:',run)
+          PY
       - name: Check importer credentials
+        if: steps.uk_schedule.outputs.run_import == 'true'
         shell: bash
         run: |
           if [ -z "$IMPORT_TOKEN" ]; then
@@ -27,6 +44,7 @@ jobs:
             exit 1
           fi
       - name: Import current 2026-27 season
+        if: steps.uk_schedule.outputs.run_import == 'true'
         shell: bash
         run: |
           python3 - <<'PY'
