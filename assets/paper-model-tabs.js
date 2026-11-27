@@ -12,6 +12,7 @@ const configs=[
  {id:'v1',label:'Form V1',short:'No bookmaker odds',caption:'Historical form and venue-based probabilities'},
  {id:'v2',label:'Form V2',short:'No bookmaker odds',caption:'Opponent strength, H2H and multi-market predictions'},
  {id:'accuracy',label:'Model accuracy',short:'V1 vs V2',caption:'Historical replay, accuracy and calibration'},
+ {id:'backtest',label:'Historical P&L',short:'Odds vs Reverse',caption:'Reconstructed selections and daily P&L across historical seasons'},
  {id:'reports',label:'Reports',short:'P&L and diagnostics',caption:'Daily performance, breakdowns and result health'}
 ];
 const select=doc.getElementById('pb-ledger-scope');
