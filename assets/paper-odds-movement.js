@@ -71,6 +71,8 @@ async function load(){
  finally{loading=false;button.disabled=false}
 }
 button.addEventListener('click',load);select.addEventListener('change',render);
-root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks'&&!loaded){loaded=true;load()}});
-if(!view.hidden){loaded=true;load()}
+root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks'&&!loaded&&!view.hidden&&(!parent.dataset.paperTabsReady||(parent.dataset.paperTab==='reports'&&section.closest('.gb-paper-report')?.open))){loaded=true;load()}});
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='reports'&&section.closest('.gb-paper-report')?.open&&!loaded){loaded=true;load()}});
+ root.addEventListener('gerball:paper-reportopen',e=>{if(e.detail?.report==='movement'){loaded=true;load()}});
+if(!view.hidden&&(!parent.dataset.paperTabsReady||(parent.dataset.paperTab==='reports'&&section.closest('.gb-paper-report')?.open))){loaded=true;load()}
 })(window);
