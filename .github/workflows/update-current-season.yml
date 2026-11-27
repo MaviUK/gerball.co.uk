@@ -1,8 +1,11 @@
 name: Update current football season
 on:
   schedule:
-    # 08:15 UTC Monday and Friday. GitHub scheduled jobs may be delayed.
+    # Keep the established 08:15 UTC Monday/Friday full current-season refresh.
     - cron: '15 8 * * 1,5'
+    # Refresh newly completed match results daily on the other five days.
+    # The existing hourly Supabase reconciliation settles paper bets after import.
+    - cron: '15 8 * * 0,2,3,4,6'
   workflow_dispatch:
 permissions:
   contents: read
