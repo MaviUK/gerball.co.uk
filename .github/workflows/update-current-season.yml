@@ -32,7 +32,7 @@ jobs:
           expected='15 7 * * *' if uk.utcoffset().total_seconds()==3600 else '15 8 * * *'
           run=os.environ.get('EVENT_NAME')=='workflow_dispatch' or os.environ.get('SCHEDULE_EXPRESSION')==expected
           with open(os.environ['GITHUB_OUTPUT'],'a') as output:
-            output.write('run_import='+('true' if run else 'false')+'\\n')
+            output.write('run_import='+('true' if run else 'false')+'\n')
           print('UK date:',uk.date(),'Offset:',uk.utcoffset(),'Trigger:',os.environ.get('SCHEDULE_EXPRESSION'),'Import:',run)
           PY
       - name: Check importer credentials
@@ -76,14 +76,14 @@ jobs:
           }
           print(json.dumps(report,indent=2))
           with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as summary:
-            summary.write('## Gerball football results import\\n')
-            summary.write(f"- Latest completed match: **{latest or 'none'}**\\n")
-            summary.write(f"- Results dated within the last 7 days: **{recent}**\\n")
-            summary.write(f"- Leagues processed: **{len(rows)}**; failures: **{len(failures)}**\\n")
+            summary.write('## Gerball football results import\n')
+            summary.write(f"- Latest completed match: **{latest or 'none'}**\n")
+            summary.write(f"- Results dated within the last 7 days: **{recent}**\n")
+            summary.write(f"- Leagues processed: **{len(rows)}**; failures: **{len(failures)}**\n")
             if failures:
-              summary.write('\\n### Failed leagues\\n')
+              summary.write('\n### Failed leagues\n')
               for r in failures:
-                summary.write(f"- {r.get('league','unknown')}: {r.get('error','unknown error')}\\n")
+                summary.write(f"- {r.get('league','unknown')}: {r.get('error','unknown error')}\n")
           if len(rows)!=21 or failures:
             raise SystemExit('Incomplete import: expected all 21 leagues without errors')
           if not latest:
