@@ -40,6 +40,7 @@ function render(data){
  table.append(tbody);tableHost.append(table);
 }
 async function load(force=false){
+ if(host.dataset.paperTab&&host.dataset.paperTab!=='reverse'){section.hidden=true;return}
  const date=selected();section.hidden=!date||view.hidden;if(!date)return;
  if(!force&&key===date&&Date.now()-lastLoad<30000)return;
  if(controller)controller.abort();controller=new AbortController();const pending=controller;
@@ -56,6 +57,7 @@ async function load(force=false){
  finally{if(pending===controller){controller=null;refresh.disabled=false}}
 }
 refresh.addEventListener('click',()=>load(true));
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='reverse')load(true)})
 root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks')load(true);else section.hidden=true});
 root.document.getElementById('pb-ledger-scope')?.addEventListener('change',()=>load(true));
 root.document.getElementById('pb-ledger-date')?.addEventListener('change',()=>load(true));
