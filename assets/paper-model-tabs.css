@@ -76,3 +76,31 @@ body.gb-paper-current #viewHero p{font-size:13px}
  #paperBets .gb-paper-report>summary{align-items:flex-start;flex-direction:column}
 }
 @media(prefers-reduced-motion:reduce){#paperBets .gb-paper-tablist{scroll-behavior:auto}}
+
+/* Keep sub-tabs in document flow below the main navigation. */
+#paperBets .gb-paper-tabs{position:relative!important;top:auto!important;z-index:2!important;box-shadow:0 4px 14px #0005}
+#paperBets .gb-paper-tablist>button.gb-paper-tab,
+#paperBets .gb-paper-tablist>button.gb-paper-tab:not(.nav-item):not(.overview-tile):not(.team-link):not(.table-team-button){
+ background:#192c33!important;color:#d4e2e9!important;border:1px solid #355058!important;
+ border-radius:9px!important;box-shadow:none!important;text-align:left!important;
+ font-weight:650!important;
+}
+#paperBets .gb-paper-tablist>button.gb-paper-tab small{color:#a6b8c3!important}
+#paperBets .gb-paper-tablist>button.gb-paper-tab.is-active,
+#paperBets .gb-paper-tablist>button.gb-paper-tab[aria-selected="true"]{
+ background:#264332!important;color:#f1ffe3!important;border:1px solid #b5ed62!important;
+ box-shadow:inset 0 -3px 0 #cafa5d!important;
+}
+#paperBets .gb-paper-tablist>button.gb-paper-tab.is-active small{color:#c6e3b5!important}
+#paperBets .gb-paper-tablist>button.gb-paper-tab:focus-visible{outline:3px solid #cafa5d!important;outline-offset:2px}
+#paperBets .gb-paper-tablist>button.gb-paper-tab:hover:not(.is-active){background:#233a3b!important}
+#paperBets .gb-paper-hub-intro{max-width:800px}
+#paperBets .gb-paper-criteria{border:1px solid #455a59;background:#132625;border-radius:9px;margin:11px 0}
+#paperBets .gb-paper-criteria>summary{padding:11px 14px;color:#c2e8bd;cursor:pointer;font-size:13px;font-weight:650}
+#paperBets .gb-paper-criteria .pb-warning{margin:0;border:0;background:transparent;padding:12px 14px;font-size:12px;line-height:1.5}
+@media(max-width:620px){
+ #paperBets .gb-paper-tabs{position:relative!important;top:auto!important;margin-bottom:12px}
+ #paperBets .gb-paper-tablist{gap:7px}
+ #paperBets .gb-paper-tab{flex:0 0 128px;min-width:128px;min-height:55px}
+ #paperBets .gb-paper-hub-header{gap:5px}
+}
