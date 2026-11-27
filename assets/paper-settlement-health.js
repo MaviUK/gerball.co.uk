@@ -16,6 +16,7 @@ const refresh=el('button','Check result status','secondary');refresh.type='butto
 panel.append(header,el('p','Tracks every saved paper selection through kickoff, the three-hour results grace period, import and settlement. Corrections retain their previous score revisions.','pb-caption'));
 const status=el('p','Not loaded','pb-caption');status.setAttribute('role','status');panel.append(status);
 const metrics=el('div',undefined,'pb-health-grid');panel.append(metrics);
+const importWarning=el('p','','pb-warning');importWarning.setAttribute('role','status');importWarning.hidden=true;panel.append(importWarning);
 const detail=el('p','','pb-caption');panel.append(detail);
 const heading=el('h3','Past matches still awaiting a result');panel.append(heading);
 const tableBox=el('div',undefined,'pb-table-wrap');panel.append(tableBox);
@@ -28,8 +29,14 @@ function render(report){
  for(const [stage,label] of Object.entries(stages))metrics.append(tile(label,map.get(stage)||0));
  metrics.append(tile('Over 48 hours without settlement',report.late_over_48_hours));
  metrics.append(tile('Corrected result observations',report.revisions?.corrected_observations??0));
+ const importAge=Number(report.import_age_hours);
+ importWarning.hidden=!report.import_stale;
+ importWarning.textContent=report.import_stale?
+   'Result feed is stale'+(Number.isFinite(importAge)?' ('+importAge.toFixed(1)+' hours since the last stored import)':'')+
+   '. The hourly settlement checker cannot settle matches until verified results are imported. Check the football-data import workflow.':'';
  detail.textContent='Last hourly reconciliation: '+toDate(report.latest_reconcile_at)
    +' · Latest football-data.co.uk import: '+toDate(report.latest_results_import_at)
+   +' · Latest completed match date: '+(report.latest_result_match_date??'Not yet available')
    +' · Revisions stored: '+(report.revisions?.total_revisions??0)+'.';
  tableBox.replaceChildren();
  const table=el('table'),head=el('thead'),tr=el('tr');
