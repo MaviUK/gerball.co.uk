@@ -89,7 +89,7 @@ function render(report){
 }
 let controller=null;
 async function load(){
- if(view.hidden){panel.hidden=true;controller?.abort();return}
+ if(view.hidden||(host.dataset.paperTab&&host.dataset.paperTab!=='accuracy')){panel.hidden=true;controller?.abort();return}
  panel.hidden=false;controller?.abort();const current=new AbortController();controller=current;refresh.disabled=true;status.textContent='Calculating historical model comparison…';
  try{
   const params=new URLSearchParams({scope:'form_evaluation',mode:mode.value});
@@ -112,6 +112,7 @@ async function load(){
 mode.addEventListener('change',()=>{season.disabled=mode.value==='live';if(season.disabled)season.value='';load()});
 season.addEventListener('change',load);league.addEventListener('change',load);
 refresh.addEventListener('click',load);
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='accuracy')load();else controller?.abort()});
 root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks')load();else{panel.hidden=true;controller?.abort()}});
 if(!view.hidden)load();
 })(window);
