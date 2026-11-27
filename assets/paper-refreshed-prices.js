@@ -15,7 +15,7 @@ let report=null,loading=false,lastLoaded=0,controller=null;
 const millis=t=>Date.parse(t);
 const showDate=t=>{const d=new Date(t);return Number.isFinite(d.getTime())?d.toLocaleString('en-GB',{timeZone:'Europe/London',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' UK':'Unavailable'};
 root.GerballPaperPriceComparison={get:(eventId,market,kickoff,now)=>helper.currentQuote(report,eventId,market,kickoff,now)};
-function active(){return !view.hidden&&!root.document.hidden}
+function active(){return !view.hidden&&!root.document.hidden&&(!holder.dataset.paperTab||holder.dataset.paperTab==='odds')}
 function render(){
  tableHost.replaceChildren();
  if(!report)return;
@@ -68,6 +68,7 @@ function tick(){
  if(!lastLoaded||Date.now()-lastLoaded>=5*60000)load();
 }
 refresh.addEventListener('click',()=>load(true));
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='odds')load();else controller?.abort()});
 root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks')load();else if(controller)controller.abort()});
 root.document.addEventListener('visibilitychange',tick);
 root.setInterval(tick,60000);
