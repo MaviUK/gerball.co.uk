@@ -42,6 +42,7 @@ const toolbarTop=make('div',undefined,'gb-paper-toolbar-top');
 toolbarTop.append(make('strong','Match date'),make('span','Shared across the betting models · UK time'));
 toolbar.append(toolbarTop);
 const sharedFilters=intro.querySelector('.pb-history-filters');toolbar.append(sharedFilters);
+const originalTitle=intro.querySelector('.pb-top h2');if(originalTitle)originalTitle.textContent='Odds-based paper bets';
 const alert=make('p',undefined,'gb-paper-scope-alert');alert.hidden=true;alert.setAttribute('role','status');toolbar.append(alert);
 const tabCaption=make('div',undefined,'gb-paper-tab-caption');tabCaption.setAttribute('aria-live','off');
 const tabHeading=make('strong',undefined),tabDetail=make('span',undefined);tabCaption.append(tabHeading,tabDetail);
@@ -57,6 +58,12 @@ details.append(make('summary','Show all match assessments, including no-bet deci
 if(candidate)details.append(candidate);odds.append(details);
 const reverseSection=move('.gb-reverse',reverse);
 const extraSection=move('.gb-extra-market',extra);
+const h2h=host.querySelector('.gb-h2h-panel');
+if(h2h){
+ const wrap=make('details',undefined,'gb-paper-h2h-details');
+ const summary=make('summary','Explore full head-to-head fixture analysis (goals, half-time and cards)');
+ h2h.replaceWith(wrap);wrap.append(summary,h2h);
+}
 const v1Section=move('#gb-form-model',v1);
 const v2Section=move('#gb-form-v2',v2);
 const accuracySection=move('#gb-evaluation',accuracy);
@@ -97,6 +104,8 @@ function saveUrl(id){
  catch{/* URL state is optional */}
 }
 function scopeNotice(){
+ if(host.dataset.paperTab==='reports'||host.dataset.paperTab==='accuracy')toolbar.hidden=true;
+ else toolbar.hidden=false;
  const history=select?.value==='history',tab=host.dataset.paperTab;
  reverseNote.hidden=!(history&&tab==='reverse');
  formNote.hidden=!(history&&tab==='v1');
