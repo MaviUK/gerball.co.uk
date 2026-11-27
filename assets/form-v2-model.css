@@ -1,0 +1,32 @@
+#paperBets .gb-v2-panel{background:linear-gradient(140deg,#13251d,#0b1711)!important;border:1px solid #5e8249!important;border-left:5px solid #cafa5d!important;margin-top:18px}
+#paperBets .gb-v2-head{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#paperBets .gb-v2-kicker{display:block;letter-spacing:.17em;font:700 11px ui-monospace,monospace;color:#cafa5d}
+#paperBets .gb-v2-heading h2{font:italic clamp(22px,3vw,30px) Impact,"Arial Narrow",system-ui,sans-serif;margin:4px 0!important}
+#paperBets .gb-v2-head button{width:auto}
+#paperBets .gb-v2-numbers,#paperBets .gb-v2-quick{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:15px 0}
+#paperBets .gb-v2-stat{padding:12px;border:1px solid #435c43;background:#1b3021;min-width:0}
+#paperBets .gb-v2-stat small{display:block;color:#b2c7b2;font-size:10px}
+#paperBets .gb-v2-stat strong{display:block;color:#d5f992;font:italic 23px Impact,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+#paperBets .gb-v2-cards{display:grid;gap:12px}
+#paperBets .gb-v2-card{border:1px solid #35583e;background:#13271b;padding:14px}
+#paperBets .gb-v2-match{display:flex;justify-content:space-between;align-items:center;gap:16px}
+#paperBets .gb-v2-match strong{font-size:18px;display:block}
+#paperBets .gb-v2-match small{font-size:11px;color:#b3c1b0}
+#paperBets .gb-v2-pick{text-align:right;min-width:110px}
+#paperBets .gb-v2-pick strong{color:#cafa5d;font-size:23px}
+#paperBets .gb-v2-pick span{display:block;font-variant-numeric:tabular-nums}
+#paperBets .gb-v2-quick{grid-template-columns:repeat(4,minmax(0,1fr))}
+#paperBets .gb-v2-quick .gb-v2-stat strong{font-size:17px}
+#paperBets .gb-v2-details summary{cursor:pointer;color:#cafa5d;padding:10px 0;font-size:13px;font-weight:700}
+#paperBets .gb-v2-markets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px}
+#paperBets .gb-v2-prob-group,#paperBets .gb-v2-factors{padding:12px;background:#0e1c14;border:1px solid #35513d;min-width:0}
+#paperBets .gb-v2-prob-group h5,#paperBets .gb-v2-factors h5{font-size:12px;letter-spacing:.07em;margin:0 0 12px}
+#paperBets .gb-v2-prob{display:grid;grid-template-columns:90px minmax(25px,1fr) 46px;align-items:center;gap:8px;font-size:11px;margin:7px 0}
+#paperBets .gb-v2-track{height:8px;border-radius:10px;background:#324b37;overflow:hidden}
+#paperBets .gb-v2-fill{height:100%;background:#b9ed5c}
+#paperBets .gb-v2-prob strong{text-align:right;font-variant-numeric:tabular-nums}
+#paperBets .gb-v2-factors{margin-top:12px}
+#paperBets .gb-v2-pair{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #2d4331;padding:6px 0;font-size:12px}
+#paperBets .gb-v2-pair b{text-align:right}
+@media(max-width:770px){#paperBets .gb-v2-numbers{grid-template-columns:repeat(3,minmax(0,1fr))}#paperBets .gb-v2-quick{grid-template-columns:repeat(2,minmax(0,1fr))}#paperBets .gb-v2-markets{grid-template-columns:1fr}}
+@media(max-width:430px){#paperBets .gb-v2-numbers{grid-template-columns:repeat(2,minmax(0,1fr))}#paperBets .gb-v2-card{padding:10px}}
