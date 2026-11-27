@@ -65,6 +65,8 @@ async function load(){
  finally{loading=false;refresh.disabled=false}
 }
 refresh.addEventListener('click',load);
-root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks'&&!started){started=true;load()}});
-if(!view.hidden){started=true;load()}
+root.addEventListener('gerball:viewchange',e=>{if(e.detail?.view==='picks'&&!started&&!view.hidden&&(!parent.dataset.paperTabsReady||(parent.dataset.paperTab==='reports'&&panel.closest('.gb-paper-report')?.open))){started=true;load()}});
+ root.addEventListener('gerball:paper-tabchange',e=>{if(e.detail?.tab==='reports'&&panel.closest('.gb-paper-report')?.open&&!started){started=true;load()}});
+ root.addEventListener('gerball:paper-reportopen',e=>{if(e.detail?.report==='settlement'){started=true;load()}});
+if(!view.hidden&&(!parent.dataset.paperTabsReady||(parent.dataset.paperTab==='reports'&&panel.closest('.gb-paper-report')?.open))){started=true;load()}
 })(window);
