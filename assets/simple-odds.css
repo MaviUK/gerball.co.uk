@@ -1,0 +1,50 @@
+/* Odds-first match cards: readable prices with detail on demand */
+.upcoming-workspace .upcoming-list{grid-template-columns:1fr!important;gap:9px!important}
+.upcoming-workspace .upcoming-fixture{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(220px,1.65fr) minmax(220px,1.45fr);column-gap:19px;row-gap:8px;align-items:center;padding:15px 18px!important;background:#111b16!important;border:1px solid #34483a!important;border-left:3px solid #aac957!important;min-height:0}
+.upcoming-fixture-meta{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;font-family:ui-monospace,monospace}
+.upcoming-league{color:#9fac9c!important;font-size:11px!important;font-weight:800!important}
+.upcoming-kickoff{color:#e7f0db!important;font-size:13px!important;font-weight:750!important}
+.upcoming-teams{margin:0!important;grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);gap:8px!important;align-self:center}
+.upcoming-team-link,.upcoming-team-name{font-size:17px!important;font-weight:800!important;line-height:1.25!important;text-decoration:none!important}
+.upcoming-team-note,.upcoming-team-stats,.upcoming-team-season,.upcoming-form{display:none!important}
+.upcoming-versus{color:#9bb196;font-size:12px;font-weight:900;text-transform:uppercase}
+.upcoming-odds-heading{grid-column:3;margin:0 0 -3px!important;color:#9eb39e!important;font-family:ui-monospace,monospace;font-size:9px!important;font-weight:800!important;letter-spacing:.065em}
+.upcoming-primary-odds{grid-column:3;grid-row:2;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+.upcoming-quote{background:#203022!important;border:1px solid #496346!important;border-radius:2px!important;padding:8px 4px!important}
+.upcoming-market-label{font-size:11px!important;font-weight:900;color:#c8d9be!important;letter-spacing:.03em}
+.upcoming-price{font-family:Impact,"Arial Narrow",system-ui,sans-serif!important;font-size:26px!important;font-style:italic;line-height:1.2!important;color:#cafa5d!important;font-variant-numeric:tabular-nums}
+.upcoming-price-missing{color:#778777!important}
+.upcoming-bookmaker{font-size:10px!important;color:#b7c8ad!important;line-height:1.2!important;overflow-wrap:anywhere}
+.upcoming-quote-time{display:none!important}
+.upcoming-fixture-capture{grid-column:3;grid-row:3;margin:0!important;text-align:right;color:#879e8b!important;font-size:10px!important}
+.upcoming-more-odds{grid-column:3;grid-row:4;min-width:0;margin:2px 0 0!important}
+.upcoming-more-odds summary{display:list-item;cursor:pointer;font-size:11px;color:#bbd69a!important;text-decoration:underline;text-underline-offset:2px}
+.upcoming-more-odds .upcoming-odds{margin-top:9px}
+.upcoming-fixture .upcoming-analysis-button{grid-column:2;grid-row:3/5;justify-self:start;width:auto!important;min-height:34px!important;padding:6px 12px!important;font-size:11px!important}
+.upcoming-details{grid-column:1/-1;grid-row:5;border-top:1px solid #3f5242!important;padding:8px 0 0!important;margin:4px 0 0!important}
+.upcoming-details summary{font-size:11px!important;color:#b0d3a4!important}
+.upcoming-comparison td small{display:none!important}
+.upcoming-comparison{font-size:12px!important}
+.upcoming-intro-header h2{font-family:Impact,"Arial Narrow",system-ui,sans-serif;font-size:28px!important;font-style:italic;text-transform:uppercase}
+.upcoming-explanation{max-width:850px!important}
+.upcoming-results-status{font-family:ui-monospace,monospace;font-size:12px}
+@media(max-width:920px){
+.upcoming-workspace .upcoming-fixture{grid-template-columns:minmax(90px,.6fr) minmax(0,1.7fr);gap:9px 15px}
+.upcoming-teams{grid-column:2;grid-row:1/3}
+.upcoming-odds-heading,.upcoming-primary-odds,.upcoming-fixture-capture,.upcoming-more-odds{grid-column:1/-1;grid-row:auto}
+.upcoming-fixture .upcoming-analysis-button{grid-column:1;grid-row:3;align-self:center}
+.upcoming-details{grid-row:auto}
+}
+@media(max-width:600px){
+.upcoming-workspace .upcoming-fixture{display:flex;flex-direction:column;align-items:stretch;padding:13px!important;gap:11px}
+.upcoming-fixture-meta{flex-direction:row;justify-content:space-between;align-items:center;gap:8px}
+.upcoming-teams{margin:2px 0!important;align-self:stretch}
+.upcoming-team-link,.upcoming-team-name{font-size:15px!important}
+.upcoming-odds-heading{margin-bottom:-8px!important}
+.upcoming-primary-odds{gap:6px!important}
+.upcoming-price{font-size:25px!important}
+.upcoming-fixture-capture{text-align:left}
+.upcoming-fixture .upcoming-analysis-button{align-self:flex-start}
+.upcoming-more-odds{width:100%}
+.upcoming-details{width:100%}
+}
