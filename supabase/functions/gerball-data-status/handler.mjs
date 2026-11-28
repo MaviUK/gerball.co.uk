@@ -14,7 +14,7 @@ const ISSUE_CODES = [...REASONS, 'archive_current_season_missing', 'import_targe
 const JOBS = {
   collector: ['gerball-daily-odds', '0,5,10 11,12 * * *'],
   recorder: ['gerball-recorded-screens', '15,20,25 11,12 * * *'],
-  reconciliation: ['gerball-recorded-screen-results', '30 * * * *'],
+  reconciliation: ['gerball-recorded-screen-results', '12 * * * *'],
 };
 const TODAY_STATUSES = { collector: ['running', 'completed', 'partial', 'failed'], recorder: ['complete', 'partial', 'failed'], reconciliation: ['complete'] };
 const CORS = {

@@ -20,7 +20,7 @@ Result counts measure **stored observations**, including repeated daily records.
 | --- | --- | --- |
 | Daily odds | 12:00 UK; retries 12:05 and 12:10 | 12:15 UK |
 | Recorded screens | 12:15 UK; retries 12:20 and 12:25 | 12:30 UK |
-| Result reconciliation | Hourly at :30 | 90 minutes after the last successful check; initial run has a short grace period |
+| Result reconciliation | Hourly at :12 UTC; reconcile only when imported data or new observations need it; daily safety run | 90 minutes after the last successful check; initial run has a short grace period |
 
 UK schedules use `Europe/London` and follow GMT/BST. Missing current-day data before its scheduled time is shown as not due. The period between the initial run and deadline is a waiting state. A failed run, disabled or missing job, changed job configuration, or incompatible frozen rule implementation is shown for attention.
 
