@@ -13,6 +13,8 @@ jobs:
           node-version: '22'
       - name: Validate inline scripts and required navigation
         run: node scripts/check-site.cjs
+      - name: Verify historical request coalescing, freshness and cache limits
+        run: node --test scripts/check-historical-request-cache.mjs
       - name: Verify selected-market summaries, chronology and CSV exports
         run: node --test scripts/check-walkforward-calculations.mjs scripts/check-walkforward-panel.mjs
       - name: Verify research CSV bytes, captured settings and report request lifecycle

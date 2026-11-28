@@ -27,8 +27,8 @@ function stage(key) {
   const recorder = key === 'recorder', reconciliation = key === 'reconciliation';
   return { state: 'complete', reason_code: reconciliation ? 'reconciliation_current' : recorder ? 'recording_complete' : 'collection_complete',
     today_scheduled_at: `2026-11-24T${reconciliation ? '00:30' : recorder ? '12:15' : '12:00'}:00Z`, deadline_at: `2026-11-24T${reconciliation ? '00:35' : recorder ? '12:30' : '12:15'}:00Z`,
-    next_run_at: reconciliation ? '2026-11-24T23:30:00Z' : `2026-11-25T${recorder ? '12:15' : '12:00'}:00Z`, last_activity_at: reconciliation ? '2026-11-24T22:30:00Z' : recorder ? '2026-11-24T12:15:02Z' : '2026-11-24T12:00:02Z',
-    last_success_at: reconciliation ? '2026-11-24T22:30:00Z' : recorder ? '2026-11-24T12:15:02Z' : '2026-11-24T12:00:02Z', today_status: 'completed', completed_leagues: reconciliation ? null : 18,
+    next_run_at: reconciliation ? '2026-11-24T23:12:00Z' : `2026-11-25T${recorder ? '12:15' : '12:00'}:00Z`, last_activity_at: reconciliation ? '2026-11-24T22:12:00Z' : recorder ? '2026-11-24T12:15:02Z' : '2026-11-24T12:00:02Z',
+    last_success_at: reconciliation ? '2026-11-24T22:12:00Z' : recorder ? '2026-11-24T12:15:02Z' : '2026-11-24T12:00:02Z', today_status: 'completed', completed_leagues: reconciliation ? null : 18,
     expected_leagues: reconciliation ? null : 18, records: reconciliation ? null : recorder ? 170 : 1700, mode: 'scheduled', ...(reconciliation ? { stale_after_minutes: 90, checked: 170, appended: 0 } : {}) };
 }
 function payload() {
@@ -36,7 +36,7 @@ function payload() {
     archive: { total_matches: 2100, scored_matches: 2100, current_season_matches: 210, current_season_leagues: 21, league_count: 21, first_match_date: '2023-08-01', last_match_date: '2026-11-22',
       import_schedule: { cron: '15 8 * * 1,5', timezone: 'UTC', next_run_at: '2026-11-27T08:15:00Z', source: 'repository_declared', target_season: '2627', matches_current_season: true, run_audit_available: false, last_successful_run_at: null } },
     stages: Object.fromEntries(['collector', 'recorder', 'reconciliation'].map(key => [key, stage(key)])),
-    jobs: ['collector', 'recorder', 'reconciliation'].map(key => ({ key, name: key, present: true, active: true, schedule: key === 'reconciliation' ? '30 * * * *' : key === 'recorder' ? '15,20,25 11,12 * * *' : '0,5,10 11,12 * * *', expected_schedule: '', configuration_matches: true, next_run_at: stage(key).next_run_at, last_run: { status: 'succeeded', started_at: stage(key).last_activity_at, finished_at: stage(key).last_activity_at } })),
+    jobs: ['collector', 'recorder', 'reconciliation'].map(key => ({ key, name: key, present: true, active: true, schedule: key === 'reconciliation' ? '12 * * * *' : key === 'recorder' ? '15,20,25 11,12 * * *' : '0,5,10 11,12 * * *', expected_schedule: '', configuration_matches: true, next_run_at: stage(key).next_run_at, last_run: { status: 'succeeded', started_at: stage(key).last_activity_at, finished_at: stage(key).last_activity_at } })),
     leagues: LEAGUES.map(league),
     recent_days: [
       { date: '2026-11-24', collection: { status: 'completed', completed_leagues: 18, expected_leagues: 18, records: 1700, manual: true, last_activity_at: '2026-11-24T12:00:02Z' }, recording: { completed_leagues: 18, fixtures: 170, mode: 'bootstrap', last_activity_at: '2026-11-24T12:15:02Z' } },
@@ -81,7 +81,7 @@ test('coverage CSV retains stored dates, raw statuses and schedule evidence with
   const data = payload(); data.leagues[0].name = '=HYPERLINK("untrusted")';
   const csv = helpers.csvForCoverage(data, [data.leagues[0]], 'all');
   assert.match(csv, /current_season_last_stored_match_date/); assert.match(csv, /import_run_audit_available/); assert.match(csv, /"repository_declared"/);
-  assert.match(csv, /"collector_job_cron","recorder_job_cron","reconciliation_job_cron"/); assert.match(csv, /"30 \* \* \* \*"/);
+  assert.match(csv, /"collector_job_cron","recorder_job_cron","reconciliation_job_cron"/); assert.match(csv, /"12 \* \* \* \*"/);
   assert.match(csv, /"'=HYPERLINK\(""untrusted""\)"/); assert.match(csv, /"recorded_observations"/);
   assert.doesNotMatch(csv, /last_successful_import|last_successful_run_at/); assert.equal(csv.split('\r\n').length, 2);
   assert.equal(helpers.csvCell(' +SUM(1,1)'), '"\' +SUM(1,1)"'); assert.equal(helpers.csvCell(0), '"0"');
@@ -125,7 +125,7 @@ test('overview and full status render from one read-only request with safe text'
   assert.match(value.overviewContainer.textContent, /Recent check complete/); assert.match(value.overviewContainer.textContent, /2,100 results stored/);
   assert.match(value.container.textContent, /successful import-run history is not recorded/); assert.match(value.container.textContent, /Monday and Friday at 08:15 UTC/);
   assert.match(value.container.textContent, /including daily repeats/); assert.match(value.container.textContent, /Last successful collection/); assert.doesNotMatch(value.container.textContent, /Last successful import/);
-  assert.doesNotMatch(value.container.textContent, /Configured cron|30 \* \* \* \*/);
+  assert.doesNotMatch(value.container.textContent, /Configured cron|12 \* \* \* \*/);
   value.document.all().find(node => node.className === 'secondary ds-jump').click();
   assert.equal(value.document.activeElement.id, 'dataStatusFilter'); assert.equal(value.document.activeElement.focusOptions.preventScroll, true);
   assert.equal(value.document.getElementById('dataStatusCoverage').scrollOptions.block, 'start');

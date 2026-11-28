@@ -2,16 +2,16 @@ const CODES = ['E0', 'E1', 'E2', 'E3', 'SC0', 'SC1', 'SC2', 'SC3', 'D1', 'D2', '
 const JOBS = {
   collector: ['gerball-daily-odds', '0,5,10 11,12 * * *'],
   recorder: ['gerball-recorded-screens', '15,20,25 11,12 * * *'],
-  reconciliation: ['gerball-recorded-screen-results', '30 * * * *'],
+  reconciliation: ['gerball-recorded-screen-results', '12 * * * *'],
 };
 
 export function dataStatusFixture() {
   const generated = '2026-11-24T21:15:00+00:00';
   const stage = (key, records) => ({
     state: 'complete', reason_code: key === 'reconciliation' ? 'reconciliation_current' : key === 'collector' ? 'collection_complete' : 'recording_complete',
-    today_scheduled_at: key === 'collector' ? '2026-11-24T12:00:00+00:00' : key === 'recorder' ? '2026-11-24T12:15:00+00:00' : '2026-11-24T20:30:00+00:00',
+    today_scheduled_at: key === 'collector' ? '2026-11-24T12:00:00+00:00' : key === 'recorder' ? '2026-11-24T12:15:00+00:00' : '2026-11-24T20:12:00+00:00',
     deadline_at: key === 'collector' ? '2026-11-24T12:15:00+00:00' : key === 'recorder' ? '2026-11-24T12:30:00+00:00' : '2026-11-24T22:31:00+00:00',
-    next_run_at: key === 'collector' ? '2026-11-25T12:00:00+00:00' : key === 'recorder' ? '2026-11-25T12:15:00+00:00' : '2026-11-24T21:30:00+00:00',
+    next_run_at: key === 'collector' ? '2026-11-25T12:00:00+00:00' : key === 'recorder' ? '2026-11-25T12:15:00+00:00' : '2026-11-24T22:12:00+00:00',
     last_activity_at: '2026-11-24T21:01:00+00:00', last_success_at: '2026-11-24T21:01:00+00:00', today_status: key === 'collector' ? 'completed' : 'complete',
     completed_leagues: key === 'reconciliation' ? null : 18, expected_leagues: key === 'reconciliation' ? null : 18,
     records, mode: key === 'collector' ? 'manual' : key === 'recorder' ? 'bootstrap' : null,

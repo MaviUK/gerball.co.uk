@@ -149,8 +149,8 @@ test('the reported date follows London midnight and never fabricates import succ
   payload.generated_at = '2026-07-14T23:30:00Z';
   payload.uk_date = '2026-07-15';
   payload.recent_days = [];
-  payload.jobs.find(job => job.key === 'reconciliation').next_run_at = '2026-07-15T00:30:00Z';
-  payload.stages.reconciliation.next_run_at = '2026-07-15T00:30:00Z';
+  payload.jobs.find(job => job.key === 'reconciliation').next_run_at = '2026-07-15T00:12:00Z';
+  payload.stages.reconciliation.next_run_at = '2026-07-15T00:12:00Z';
   assert.equal(validPayload(payload), true);
   payload.uk_date = '2026-07-14';
   assert.equal(validPayload(payload), false);
